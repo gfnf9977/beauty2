@@ -14,7 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional; // <-- Дуже важливо!
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -22,7 +22,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-@Transactional // <-- Кожен тест буде "відкочувати" зміни в БД
+@Transactional 
 class BookingApplicationTests {
     
     // === Тести для ЛР4 (State) ===
@@ -66,29 +66,23 @@ class BookingApplicationTests {
      */
     @BeforeEach
     void setUpRealDatabaseData() {
-        // 1. Створюємо і зберігаємо реального клієнта
+        // 1. Створюємо і НЕГАЙНО зберігаємо реального клієнта
         User client = new User("Test Client", "client@test.com", "pass", "123");
-        userRepository.save(client);
+        userRepository.saveAndFlush(client); // <--- ВИРІШЕННЯ
         this.validClientId = client.getUserId();
 
-        // 2. Створюємо і зберігаємо реального майстра
+        // 2. Створюємо і НЕГАЙНО зберігаємо реального майстра
         Master master = new Master(client, "Test Spec", 5);
-        masterRepository.save(master);
+        masterRepository.saveAndFlush(master); // <--- ВИРІШЕННЯ
         this.validMasterId = master.getMasterId();
 
-        // 3. Створюємо і зберігаємо реальну послугу
+        // 3. Створюємо і НЕГАЙНО зберігаємо реальну послугу
         com.beautysalon.booking.entity.Service service = 
             new com.beautysalon.booking.entity.Service("Test Service", "Desc", 100, 30);
-        serviceRepository.save(service);
+        serviceRepository.saveAndFlush(service); // <--- ВИРІШЕННЯ
         this.validServiceId = service.getServiceId();
         
-        // === ВИРІШЕННЯ ===
-        // Примусово відправляємо всі 'save' в БД
-        // до того, як почнеться тест.
-        userRepository.flush();
-        masterRepository.flush();
-        serviceRepository.flush();
-        // === КІНЕЦЬ ВИРІШЕННЯ ===
+        // Тут НЕМАЄ дубліката
     }
 
     /**
@@ -115,7 +109,7 @@ class BookingApplicationTests {
     void testChainOfResponsibility_Success_RealDB() {
         System.out.println("--- Тест ЛР5: testChainOfResponsibility_Success (Real DB) ---");
         
-        // Тепер, завдяки .flush(), findById() знайде всі сутності
+        // Тепер, завдяки saveAndFlush(), findById() знайде всі сутності
         assertDoesNotThrow(() -> {
             bookingService.createBooking(validClientId, validMasterId, validServiceId, time);
         });

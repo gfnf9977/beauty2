@@ -16,40 +16,35 @@ import java.util.UUID;
 public class BookingService {
     private final IBookingRepository bookingRepository;
     private final IBookingValidationHandler validationChain;
+    private final BookingEventPublisher eventPublisher; // Ін'єкція "Суб'єкта"
 
     public BookingService(
             IBookingRepository bookingRepository,
             IUserRepository userRepository,
             IServiceRepository serviceRepository,
-            IMasterRepository masterRepository) {
+            IMasterRepository masterRepository,
+            BookingEventPublisher eventPublisher) {
 
         this.bookingRepository = bookingRepository;
+        this.eventPublisher = eventPublisher;
 
-        // === Ручна збірка ланцюжка валідаторів ===
+        // === Ланцюжок валідаторів (Chain of Responsibility) ===
         IBookingValidationHandler clientHandler = new ClientExistenceHandler(userRepository);
         IBookingValidationHandler masterHandler = new MasterExistenceHandler(masterRepository);
         IBookingValidationHandler serviceHandler = new ServiceExistenceHandler(serviceRepository);
 
-        // TODO: Додати ScheduleValidationHandler, коли буде реалізовано
-        // IBookingValidationHandler scheduleHandler = new ScheduleValidationHandler(scheduleRepository);
-
-        // З'єднуємо ланки в ланцюжок
         clientHandler.setNext(masterHandler);
         masterHandler.setNext(serviceHandler);
-        // TODO: serviceHandler.setNext(scheduleHandler);
-
         this.validationChain = clientHandler;
     }
 
     /**
-     * Створення бронювання з валідацією через ланцюжок.
+     * Створення бронювання з валідацією та повідомленням спостерігачів.
      */
     public Booking createBooking(UUID clientId, UUID serviceId, UUID masterId, LocalDateTime desiredDateTime) {
         BookingValidationContext context = new BookingValidationContext(
                 clientId, masterId, serviceId, desiredDateTime);
-
         validationChain.handle(context);
-
         if (context.hasError()) {
             throw new RuntimeException(context.getErrorMessage());
         }
@@ -63,47 +58,57 @@ public class BookingService {
         newBooking.setTotalPrice(context.getService().getPrice());
         newBooking.setStatus(BookingStatus.PENDING);
 
-        return bookingRepository.save(newBooking);
+        Booking savedBooking = bookingRepository.save(newBooking);
+        eventPublisher.notifyObservers(savedBooking); // Повідомляємо спостерігачів про нове бронювання
+        return savedBooking;
     }
 
     /**
-     * Підтвердження бронювання.
+     * Підтвердження бронювання з повідомленням спостерігачів.
      */
     public Booking confirmBooking(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
         booking.confirm();
-        return bookingRepository.save(booking);
+        Booking savedBooking = bookingRepository.save(booking);
+        eventPublisher.notifyObservers(savedBooking); // Повідомляємо про зміну статусу
+        return savedBooking;
     }
 
     /**
-     * Оплата бронювання.
+     * Оплата бронювання з повідомленням спостерігачів.
      */
     public Booking payBooking(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
         booking.pay();
-        return bookingRepository.save(booking);
+        Booking savedBooking = bookingRepository.save(booking);
+        eventPublisher.notifyObservers(savedBooking); // Повідомляємо про зміну статусу
+        return savedBooking;
     }
 
     /**
-     * Завершення бронювання.
+     * Завершення бронювання з повідомленням спостерігачів.
      */
     public Booking completeBooking(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
         booking.complete();
-        return bookingRepository.save(booking);
+        Booking savedBooking = bookingRepository.save(booking);
+        eventPublisher.notifyObservers(savedBooking); // Повідомляємо про зміну статусу
+        return savedBooking;
     }
 
     /**
-     * Скасування бронювання.
+     * Скасування бронювання з повідомленням спостерігачів.
      */
     public Booking cancelBooking(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
         booking.cancel();
-        return bookingRepository.save(booking);
+        Booking savedBooking = bookingRepository.save(booking);
+        eventPublisher.notifyObservers(savedBooking); // Повідомляємо про зміну статусу
+        return savedBooking;
     }
 
     /**
