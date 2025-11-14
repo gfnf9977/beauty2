@@ -1,10 +1,11 @@
 package com.beautysalon.booking.service;
 
-import com.beautysalon.booking.entity.*; // Імпортуємо всі сутності, вкл. BookingStatus
+import com.beautysalon.booking.entity.*;
 import com.beautysalon.booking.repository.IBookingRepository;
 import com.beautysalon.booking.repository.IMasterRepository;
 import com.beautysalon.booking.repository.IServiceRepository;
 import com.beautysalon.booking.repository.IUserRepository;
+import com.beautysalon.booking.validation.*;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -13,60 +14,65 @@ import java.util.UUID;
 
 @Service
 public class BookingService {
-
     private final IBookingRepository bookingRepository;
-    private final IUserRepository userRepository;
-    private final IServiceRepository serviceRepository;
-    private final IMasterRepository masterRepository;
+    private final IBookingValidationHandler validationChain;
 
-    public BookingService(IBookingRepository bookingRepository, IUserRepository userRepository, IServiceRepository serviceRepository, IMasterRepository masterRepository) {
+    public BookingService(
+            IBookingRepository bookingRepository,
+            IUserRepository userRepository,
+            IServiceRepository serviceRepository,
+            IMasterRepository masterRepository) {
+
         this.bookingRepository = bookingRepository;
-        this.userRepository = userRepository;
-        this.serviceRepository = serviceRepository;
-        this.masterRepository = masterRepository;
+
+        // === Ручна збірка ланцюжка валідаторів ===
+        IBookingValidationHandler clientHandler = new ClientExistenceHandler(userRepository);
+        IBookingValidationHandler masterHandler = new MasterExistenceHandler(masterRepository);
+        IBookingValidationHandler serviceHandler = new ServiceExistenceHandler(serviceRepository);
+
+        // TODO: Додати ScheduleValidationHandler, коли буде реалізовано
+        // IBookingValidationHandler scheduleHandler = new ScheduleValidationHandler(scheduleRepository);
+
+        // З'єднуємо ланки в ланцюжок
+        clientHandler.setNext(masterHandler);
+        masterHandler.setNext(serviceHandler);
+        // TODO: serviceHandler.setNext(scheduleHandler);
+
+        this.validationChain = clientHandler;
     }
 
     /**
-     * Створення бронювання.
+     * Створення бронювання з валідацією через ланцюжок.
      */
     public Booking createBooking(UUID clientId, UUID serviceId, UUID masterId, LocalDateTime desiredDateTime) {
-        User client = userRepository.findById(clientId)
-                .orElseThrow(() -> new RuntimeException("Клієнт не знайдений."));
+        BookingValidationContext context = new BookingValidationContext(
+                clientId, masterId, serviceId, desiredDateTime);
 
-        com.beautysalon.booking.entity.Service service = serviceRepository.findById(serviceId)
-                .orElseThrow(() -> new RuntimeException("Послугу не знайдено."));
-        
-        Master master = masterRepository.findById(masterId)
-                .orElseThrow(() -> new RuntimeException("Майстер не знайдений."));
+        validationChain.handle(context);
 
-        // TODO: Логіка перевірки розкладу (ScheduleRepository)
+        if (context.hasError()) {
+            throw new RuntimeException(context.getErrorMessage());
+        }
 
         Booking newBooking = new Booking();
-        newBooking.setClient(client);
-        newBooking.setMaster(master);
-        newBooking.setService(service);
-        newBooking.setBookingDate(desiredDateTime.toLocalDate());
-        newBooking.setBookingTime(desiredDateTime.toLocalTime());
-        newBooking.setTotalPrice(service.getPrice());
-        
-        // Встановлюємо enum. Конструктор Booking сам викличе initState().
+        newBooking.setClient(context.getClient());
+        newBooking.setMaster(context.getMaster());
+        newBooking.setService(context.getService());
+        newBooking.setBookingDate(context.getDateTime().toLocalDate());
+        newBooking.setBookingTime(context.getDateTime().toLocalTime());
+        newBooking.setTotalPrice(context.getService().getPrice());
         newBooking.setStatus(BookingStatus.PENDING);
-        
+
         return bookingRepository.save(newBooking);
     }
-    
-    // === Нові методи для управління станом ===
 
     /**
      * Підтвердження бронювання.
-     * Сервіс делегує логіку стану об'єкту Booking.
      */
     public Booking confirmBooking(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
-        
-        booking.confirm(); // <-- Виклик методу Context
-        
+        booking.confirm();
         return bookingRepository.save(booking);
     }
 
@@ -76,40 +82,32 @@ public class BookingService {
     public Booking payBooking(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
-        
-        booking.pay(); // <-- Виклик методу Context
-        
+        booking.pay();
         return bookingRepository.save(booking);
     }
-    
+
     /**
      * Завершення бронювання.
      */
     public Booking completeBooking(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
-        
-        booking.complete(); // <-- Виклик методу Context
-        
+        booking.complete();
         return bookingRepository.save(booking);
     }
 
     /**
-     * Скасування бронювання (оновлений).
+     * Скасування бронювання.
      */
     public Booking cancelBooking(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
-        
-        // Більше ніяких 'if (status.equals...)'!
-        // Просто делегуємо логіку поточному стану.
-        booking.cancel(); // <-- Виклик методу Context
-
+        booking.cancel();
         return bookingRepository.save(booking);
     }
-    
+
     /**
-     * Перегляд бронювань клієнта (без змін).
+     * Отримання бронювань клієнта.
      */
     public List<Booking> getBookingsByClient(UUID clientId) {
         return bookingRepository.findByClientUserIdOrderByBookingDateDesc(clientId);
