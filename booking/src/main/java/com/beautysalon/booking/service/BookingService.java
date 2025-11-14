@@ -1,8 +1,6 @@
 package com.beautysalon.booking.service;
 
-import com.beautysalon.booking.entity.Booking;
-import com.beautysalon.booking.entity.Master;
-import com.beautysalon.booking.entity.User;
+import com.beautysalon.booking.entity.*; // Імпортуємо всі сутності, вкл. BookingStatus
 import com.beautysalon.booking.repository.IBookingRepository;
 import com.beautysalon.booking.repository.IMasterRepository;
 import com.beautysalon.booking.repository.IServiceRepository;
@@ -13,7 +11,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-// Використовуємо анотацію Spring
 @Service
 public class BookingService {
 
@@ -22,7 +19,6 @@ public class BookingService {
     private final IServiceRepository serviceRepository;
     private final IMasterRepository masterRepository;
 
-    // Конструктор для ін'єкції залежностей
     public BookingService(IBookingRepository bookingRepository, IUserRepository userRepository, IServiceRepository serviceRepository, IMasterRepository masterRepository) {
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
@@ -31,27 +27,20 @@ public class BookingService {
     }
 
     /**
-     * Сценарій: Створення бронювання
-     * Реалізує логіку перевірки сутностей та збереження бронювання.
+     * Створення бронювання.
      */
     public Booking createBooking(UUID clientId, UUID serviceId, UUID masterId, LocalDateTime desiredDateTime) {
-        // 1. Перевірка передумов (Клієнт, Послуга, Майстер існують)
         User client = userRepository.findById(clientId)
                 .orElseThrow(() -> new RuntimeException("Клієнт не знайдений."));
 
-        // Використовуємо повне ім'я для Entity Service, щоб уникнути конфлікту з @Service
         com.beautysalon.booking.entity.Service service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new RuntimeException("Послугу не знайдено."));
         
         Master master = masterRepository.findById(masterId)
                 .orElseThrow(() -> new RuntimeException("Майстер не знайдений."));
 
-        // TODO: Тут потрібна складна логіка перевірки розкладу (ScheduleRepository)
-        // if (!isSlotAvailable(...)) {
-        //    throw new RuntimeException("Обраний час недоступний для майстра.");
-        // }
+        // TODO: Логіка перевірки розкладу (ScheduleRepository)
 
-        // 2. Формування нового бронювання
         Booking newBooking = new Booking();
         newBooking.setClient(client);
         newBooking.setMaster(master);
@@ -59,34 +48,70 @@ public class BookingService {
         newBooking.setBookingDate(desiredDateTime.toLocalDate());
         newBooking.setBookingTime(desiredDateTime.toLocalTime());
         newBooking.setTotalPrice(service.getPrice());
-        newBooking.setStatus("Pending");
         
-        // 3. Збереження (Крок 7 сценарію)
+        // Встановлюємо enum. Конструктор Booking сам викличе initState().
+        newBooking.setStatus(BookingStatus.PENDING);
+        
         return bookingRepository.save(newBooking);
+    }
+    
+    // === Нові методи для управління станом ===
+
+    /**
+     * Підтвердження бронювання.
+     * Сервіс делегує логіку стану об'єкту Booking.
+     */
+    public Booking confirmBooking(UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
+        
+        booking.confirm(); // <-- Виклик методу Context
+        
+        return bookingRepository.save(booking);
     }
 
     /**
-     * Сценарій: Переглянути/скасувати бронювання (Перегляд)
-     * ЦЕЙ МЕТОД ВИРІШУЄ ПОМИЛКУ КОМПІЛЯЦІЇ В КОНТРОЛЕРІ.
+     * Оплата бронювання.
      */
-    public List<Booking> getBookingsByClient(UUID clientId) {
-        // Викликає спеціалізований метод репозиторію для пошуку бронювань клієнта
-        return bookingRepository.findByClientUserIdOrderByBookingDateDesc(clientId);
+    public Booking payBooking(UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
+        
+        booking.pay(); // <-- Виклик методу Context
+        
+        return bookingRepository.save(booking);
     }
     
     /**
-     * Сценарій: Переглянути/скасувати бронювання (Скасування)
+     * Завершення бронювання.
+     */
+    public Booking completeBooking(UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
+        
+        booking.complete(); // <-- Виклик методу Context
+        
+        return bookingRepository.save(booking);
+    }
+
+    /**
+     * Скасування бронювання (оновлений).
      */
     public Booking cancelBooking(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
+        
+        // Більше ніяких 'if (status.equals...)'!
+        // Просто делегуємо логіку поточному стану.
+        booking.cancel(); // <-- Виклик методу Context
 
-        if (booking.getStatus().equals("Confirmed") || booking.getStatus().equals("Pending")) {
-            booking.setStatus("Cancelled");
-            // TODO: Додати логіку повернення коштів, якщо статус був "Paid"
-            return bookingRepository.save(booking);
-        } else {
-            throw new RuntimeException("Бронювання не може бути скасоване. Поточний статус: " + booking.getStatus());
-        }
+        return bookingRepository.save(booking);
+    }
+    
+    /**
+     * Перегляд бронювань клієнта (без змін).
+     */
+    public List<Booking> getBookingsByClient(UUID clientId) {
+        return bookingRepository.findByClientUserIdOrderByBookingDateDesc(clientId);
     }
 }

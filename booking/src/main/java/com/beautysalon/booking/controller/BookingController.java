@@ -21,21 +21,18 @@ public class BookingController {
     }
 
     @PostMapping
-    public ResponseEntity<Booking> createBooking(
+    public ResponseEntity<?> createBooking(
             @RequestParam UUID clientId,
             @RequestParam UUID serviceId,
             @RequestParam UUID masterId,
-            @RequestParam String dateTime) { 
-
+            @RequestParam String dateTime) {
         try {
             LocalDateTime desiredDateTime = LocalDateTime.parse(dateTime);
             Booking newBooking = bookingService.createBooking(
                     clientId, serviceId, masterId, desiredDateTime);
-            
-            return new ResponseEntity<>(newBooking, HttpStatus.CREATED); 
-            
+            return new ResponseEntity<>(newBooking, HttpStatus.CREATED);
         } catch (RuntimeException e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -45,14 +42,45 @@ public class BookingController {
         return new ResponseEntity<>(bookings, HttpStatus.OK);
     }
 
-    // Сценарій "Переглянути/скасувати бронювання" (Скасування)
-    @PutMapping("/{bookingId}/cancel")
-    public ResponseEntity<Booking> cancelBooking(@PathVariable UUID bookingId) {
+    // === Ендпоінти для зміни стану ===
+
+    @PostMapping("/{bookingId}/confirm")
+    public ResponseEntity<?> confirmBooking(@PathVariable UUID bookingId) {
+        try {
+            Booking booking = bookingService.confirmBooking(bookingId);
+            return new ResponseEntity<>(booking, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/{bookingId}/pay")
+    public ResponseEntity<?> payBooking(@PathVariable UUID bookingId) {
+        try {
+            Booking booking = bookingService.payBooking(bookingId);
+            return new ResponseEntity<>(booking, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+    
+    @PostMapping("/{bookingId}/complete")
+    public ResponseEntity<?> completeBooking(@PathVariable UUID bookingId) {
+        try {
+            Booking booking = bookingService.completeBooking(bookingId);
+            return new ResponseEntity<>(booking, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+    
+    @PutMapping("/{bookingId}/cancel") // Залишаємо PUT, як у тебе було
+    public ResponseEntity<?> cancelBooking(@PathVariable UUID bookingId) {
         try {
             Booking cancelledBooking = bookingService.cancelBooking(bookingId);
             return new ResponseEntity<>(cancelledBooking, HttpStatus.OK);
-        } catch (RuntimeException e) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 }
