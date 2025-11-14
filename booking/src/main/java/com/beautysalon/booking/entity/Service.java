@@ -1,5 +1,8 @@
 package com.beautysalon.booking.entity;
 
+// === Зміни для ЛР8 (Composite) ===
+import com.beautysalon.booking.composite.BookableItem;
+// === Кінець змін ===
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -10,7 +13,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "services")
-public class Service {
+// === Зміни для ЛР8 (Composite) ===
+public class Service implements BookableItem {
+// === Кінець змін ===
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @JdbcTypeCode(SqlTypes.CHAR)
@@ -19,6 +24,8 @@ public class Service {
     private String name;
     private String description;
     private double price;
+
+    @Column(name = "duration_minutes")
     private int durationMinutes;
 
     @ManyToOne
@@ -39,21 +46,30 @@ public class Service {
         this.durationMinutes = durationMinutes;
     }
 
-    // Геттери та Сеттери
+    // === Реалізація інтерфейсу BookableItem (ЛР8) ===
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public double getPrice() {
+        return price;
+    }
+
+    @Override
+    public int getDurationMinutes() {
+        return durationMinutes;
+    }
+    // === Кінець змін ===
+
+    // Геттери та Сеттери (решта)
     public UUID getServiceId() {
         return serviceId;
     }
 
     public void setServiceId(UUID serviceId) {
         this.serviceId = serviceId;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public String getDescription() {
@@ -64,16 +80,12 @@ public class Service {
         this.description = description;
     }
 
-    public double getPrice() {
-        return price;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public void setPrice(double price) {
         this.price = price;
-    }
-
-    public int getDurationMinutes() {
-        return durationMinutes;
     }
 
     public void setDurationMinutes(int durationMinutes) {
