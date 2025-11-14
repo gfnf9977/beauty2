@@ -2,10 +2,10 @@ package com.beautysalon.booking.controller;
 
 import com.beautysalon.booking.entity.Booking;
 import com.beautysalon.booking.service.BookingService;
+import com.beautysalon.booking.service.PaymentFacade;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -15,9 +15,14 @@ import java.util.UUID;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final PaymentFacade paymentFacade;
 
-    public BookingController(BookingService bookingService) {
+    public BookingController(
+            BookingService bookingService,
+            PaymentFacade paymentFacade
+    ) {
         this.bookingService = bookingService;
+        this.paymentFacade = paymentFacade;
     }
 
     @PostMapping
@@ -42,8 +47,6 @@ public class BookingController {
         return new ResponseEntity<>(bookings, HttpStatus.OK);
     }
 
-    // === Ендпоінти для зміни стану ===
-
     @PostMapping("/{bookingId}/confirm")
     public ResponseEntity<?> confirmBooking(@PathVariable UUID bookingId) {
         try {
@@ -57,13 +60,13 @@ public class BookingController {
     @PostMapping("/{bookingId}/pay")
     public ResponseEntity<?> payBooking(@PathVariable UUID bookingId) {
         try {
-            Booking booking = bookingService.payBooking(bookingId);
+            Booking booking = paymentFacade.payForBooking(bookingId, "LiqPay");
             return new ResponseEntity<>(booking, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
-    
+
     @PostMapping("/{bookingId}/complete")
     public ResponseEntity<?> completeBooking(@PathVariable UUID bookingId) {
         try {
@@ -73,8 +76,8 @@ public class BookingController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
-    
-    @PutMapping("/{bookingId}/cancel") // Залишаємо PUT, як у тебе було
+
+    @PutMapping("/{bookingId}/cancel")
     public ResponseEntity<?> cancelBooking(@PathVariable UUID bookingId) {
         try {
             Booking cancelledBooking = bookingService.cancelBooking(bookingId);

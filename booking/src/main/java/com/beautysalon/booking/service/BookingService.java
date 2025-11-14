@@ -6,6 +6,7 @@ import com.beautysalon.booking.repository.IMasterRepository;
 import com.beautysalon.booking.repository.IServiceRepository;
 import com.beautysalon.booking.repository.IUserRepository;
 import com.beautysalon.booking.validation.*;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,17 +17,20 @@ import java.util.UUID;
 public class BookingService {
     private final IBookingRepository bookingRepository;
     private final IBookingValidationHandler validationChain;
-    private final BookingEventPublisher eventPublisher; // Ін'єкція "Суб'єкта"
+    private final BookingEventPublisher eventPublisher;
+    private final PaymentFacade paymentFacade; // Додано для Facade
 
     public BookingService(
             IBookingRepository bookingRepository,
             IUserRepository userRepository,
             IServiceRepository serviceRepository,
             IMasterRepository masterRepository,
-            BookingEventPublisher eventPublisher) {
+            BookingEventPublisher eventPublisher,
+            @Lazy PaymentFacade paymentFacade) {
 
         this.bookingRepository = bookingRepository;
         this.eventPublisher = eventPublisher;
+        this.paymentFacade = paymentFacade;
 
         // === Ланцюжок валідаторів (Chain of Responsibility) ===
         IBookingValidationHandler clientHandler = new ClientExistenceHandler(userRepository);
@@ -59,7 +63,7 @@ public class BookingService {
         newBooking.setStatus(BookingStatus.PENDING);
 
         Booking savedBooking = bookingRepository.save(newBooking);
-        eventPublisher.notifyObservers(savedBooking); // Повідомляємо спостерігачів про нове бронювання
+        eventPublisher.notifyObservers(savedBooking);
         return savedBooking;
     }
 
@@ -71,19 +75,7 @@ public class BookingService {
                 .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
         booking.confirm();
         Booking savedBooking = bookingRepository.save(booking);
-        eventPublisher.notifyObservers(savedBooking); // Повідомляємо про зміну статусу
-        return savedBooking;
-    }
-
-    /**
-     * Оплата бронювання з повідомленням спостерігачів.
-     */
-    public Booking payBooking(UUID bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
-        booking.pay();
-        Booking savedBooking = bookingRepository.save(booking);
-        eventPublisher.notifyObservers(savedBooking); // Повідомляємо про зміну статусу
+        eventPublisher.notifyObservers(savedBooking);
         return savedBooking;
     }
 
@@ -95,7 +87,7 @@ public class BookingService {
                 .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
         booking.complete();
         Booking savedBooking = bookingRepository.save(booking);
-        eventPublisher.notifyObservers(savedBooking); // Повідомляємо про зміну статусу
+        eventPublisher.notifyObservers(savedBooking);
         return savedBooking;
     }
 
@@ -107,8 +99,15 @@ public class BookingService {
                 .orElseThrow(() -> new RuntimeException("Бронювання не знайдено."));
         booking.cancel();
         Booking savedBooking = bookingRepository.save(booking);
-        eventPublisher.notifyObservers(savedBooking); // Повідомляємо про зміну статусу
+        eventPublisher.notifyObservers(savedBooking);
         return savedBooking;
+    }
+
+    /**
+     * Метод для повідомлення спостерігачів про оплату (для PaymentFacade).
+     */
+    public void notifyPaymentObservers(Booking booking) {
+        eventPublisher.notifyObservers(booking);
     }
 
     /**
