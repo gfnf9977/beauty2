@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="uk" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Всі бронювання | Адмін</title>
+    <link rel="stylesheet" href="/css/beauty-salon.css">
+    <style>
+        .admin-table-header { background-color: #343a40; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;}
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        th { background-color: #e9ecef; color: #495057; }
+        tr:hover { background-color: #f1f1f1; }
+        
+        /* Кольори статусів */
+        .status-PENDING { color: orange; font-weight: bold; }
+        .status-CONFIRMED { color: blue; font-weight: bold; }
+        .status-PAID { color: green; font-weight: bold; }
+        .status-COMPLETED { color: gray; }
+        .status-CANCELLED { color: red; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-card" style="width: 95%; max-width: 1400px;">
+        <div class="content">
+            
+            <div class="admin-table-header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1>Журнал усіх бронювань</h1>
+                    <a href="/auth/admin/dashboard" class="btn-primary" style="background-color: #6c757d; text-decoration: none;">← Назад</a>
+                </div>
+            </div>
+
+            <div th:if="${#lists.isEmpty(bookings)}">
+                <p style="text-align: center; padding: 20px;">Бронювань у системі поки немає.</p>
+            </div>
+
+            <table th:if="${not #lists.isEmpty(bookings)}">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Дата/Час</th>
+                        <th>Клієнт</th>
+                        <th>Майстер</th>
+                        <th>Послуга</th>
+                        <th>Ціна</th>
+                        <th>Статус</th>
+                        <th>Дата оплати</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="b : ${bookings}">
+                        <td th:text="${#strings.substring(b.bookingId, 0, 8)} + '...'" style="font-family: monospace; color: #888;"></td>
+                        
+                        <td th:text="${b.bookingDate} + ' ' + ${b.bookingTime}"></td>
+                        
+                        <td th:text="${b.client.name}"></td>
+                        
+                        <td th:text="${b.master.user.name} + ' (' + ${b.master.specialization} + ')'"></td>
+                        
+                        <td th:text="${b.service.name}"></td>
+                        <td th:text="${b.totalPrice} + ' грн'"></td>
+                        
+                        <td th:class="'status-' + ${b.status}" th:text="${b.status}"></td>
+
+                        <td>
+                            <span th:if="${b.payment != null}" th:text="${#temporals.format(b.payment.paymentDate, 'dd-MM HH:mm')}"></span>
+                            <span th:if="${b.payment == null}">-</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+</body>
+</html>

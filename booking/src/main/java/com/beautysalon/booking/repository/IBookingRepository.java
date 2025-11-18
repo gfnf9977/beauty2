@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface IBookingRepository extends JpaRepository<Booking, UUID> {
     List<Booking> findByClientUserIdOrderByBookingDateDesc(UUID userId);
+    List<Booking> findByMasterMasterIdOrderByBookingDateDesc(UUID masterId);
 }

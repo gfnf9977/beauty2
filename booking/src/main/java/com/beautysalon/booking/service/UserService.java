@@ -10,7 +10,6 @@ import java.util.Optional;
 
 @Service
 public class UserService {
-
     private final IUserRepository userRepository;
 
     public UserService(IUserRepository userRepository) {
@@ -25,7 +24,7 @@ public class UserService {
 
     // Шукає користувача за email
     public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email); // ✅ ПРАВИЛЬНО!
+        return userRepository.findByEmail(email);
     }
 
     // Всіх користувачів
@@ -55,5 +54,10 @@ public class UserService {
         } catch (IllegalArgumentException e) {
             // ignore
         }
+    }
+
+    // НОВИЙ МЕТОД: Отримати список користувачів за роллю
+    public List<User> getUsersByRole(Role role) {
+        return userRepository.findByRole(role);
     }
 }

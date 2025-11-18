@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="uk" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Адмін Панель</title>
+    <link rel="stylesheet" href="/css/beauty-salon.css">
+    <style>
+        .admin-header {
+            background-color: #343a40;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            min-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-card" style="max-width: 1000px;">
+        <div class="content">
+            <div class="admin-header">
+                <h1>Панель Адміністратора</h1>
+                <p>Вітаємо, <span th:text="${admin.name}">Admin</span>!</p>
+            </div>
+            <div style="margin-top: 30px;">
+                <h3>Керування салоном</h3>
+                <p>Тут буде функціонал для управління майстрами, послугами та розкладом.</p>
+
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li style="margin-bottom: 10px;">
+                        <a href="/web/admin/users" class="btn-primary">
+                            Управління користувачами
+                        </a>
+                    </li>
+                    <li style="margin-bottom: 10px;">
+                        <button class="btn-primary">Управління послугами</button>
+                    </li>
+                    <li style="margin-bottom: 10px;">
+                        <a href="/web/admin/bookings" class="btn-primary">
+                            Перегляд всіх бронювань
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="footer" style="margin-top: 50px;">
+                <a href="/auth/login">Вийти</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

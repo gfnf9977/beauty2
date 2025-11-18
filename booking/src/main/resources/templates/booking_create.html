@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="uk" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Створити бронювання</title>
+    <link rel="stylesheet" href="/css/beauty-salon.css">
+</head>
+<body>
+    <div class="auth-card" style="max-width: 600px;">
+        <h1>Записатися на послугу</h1>
+        
+        <div class="error" th:if="${error}" th:text="${error}" style="color: red; margin-bottom: 15px;"></div>
+
+        <form th:action="@{/web/bookings/create}" method="post">
+            
+            <div class="form-group">
+                <label>Оберіть послугу:</label>
+                <select name="serviceId" required>
+                    <option th:each="s : ${services}" 
+                            th:value="${s.serviceId}" 
+                            th:text="${s.name} + ' (' + ${s.price} + ' грн)'"></option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Оберіть майстра:</label>
+                <select name="masterId" required>
+                    <option th:each="m : ${masters}" 
+                            th:value="${m.masterId}" 
+                            th:text="${m.specialization} + ' - Досвід: ' + ${m.experience} + ' років'"></option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Дата та час:</label>
+                <input type="datetime-local" name="dateTime" required 
+                       th:value="${#temporals.format(#temporals.createNow().plusDays(1), 'yyyy-MM-dd''T''10:00')}">
+            </div>
+
+            <button type="submit" class="btn-primary">Забронювати</button>
+            <a href="/auth/home" class="links">Назад</a>
+        </form>
+    </div>
+</body>
+</html>

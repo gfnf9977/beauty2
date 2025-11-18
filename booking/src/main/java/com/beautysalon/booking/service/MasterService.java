@@ -16,6 +16,7 @@ public class MasterService {
     private final IMasterRepository masterRepository;
     private final IScheduleRepository scheduleRepository;
 
+    // Конструктор (прибрали userRepository, бо він не використовується)
     public MasterService(IMasterRepository masterRepository, IScheduleRepository scheduleRepository) {
         this.masterRepository = masterRepository;
         this.scheduleRepository = scheduleRepository;
@@ -35,9 +36,13 @@ public class MasterService {
             throw new RuntimeException("Некоректний часовий проміжок.");
         }
         
-        // Тут потрібна логіка перевірки перетину розкладів
-        
         Schedule schedule = new Schedule(master, date, startTime, endTime);
         return scheduleRepository.save(schedule);
+    }
+
+    // === НОВИЙ МЕТОД (Для відображення розкладу в кабінеті) ===
+    public Master findMasterByUser(UUID userId) {
+        return masterRepository.findByUserUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Профіль майстра не знайдено для цього користувача."));
     }
 }

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="uk" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Кабінет Майстра</title>
+    <link rel="stylesheet" href="/css/beauty-salon.css">
+    <style>
+        .master-header { background-color: #6f42c1; color: white; padding: 20px; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f8f9fa; }
+        .status-PENDING { color: orange; font-weight: bold; }
+        .status-CONFIRMED { color: blue; font-weight: bold; }
+        .status-PAID { color: green; font-weight: bold; }
+        .status-COMPLETED { color: gray; }
+        .status-CANCELLED { color: red; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-card" style="width: 90%; max-width: 1200px;">
+        <div class="content">
+            <div class="master-header">
+                <h1>Кабінет Майстра</h1>
+                <p>Вітаємо, <span th:text="${master.user.name}">Master</span>!</p>
+                <p>Спеціалізація: <span th:text="${master.specialization}"></span></p>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h3>Ваш розклад та історія записів</h3>
+
+                <div th:if="${#lists.isEmpty(bookings)}">
+                    <p>Записів поки немає.</p>
+                </div>
+
+                <table th:if="${not #lists.isEmpty(bookings)}">
+                    <thead>
+                        <tr>
+                            <th>Дата та Час</th>
+                            <th>Клієнт</th>
+                            <th>Послуга</th>
+                            <th>Ціна</th>
+                            <th>Статус</th>
+                            <th>Дія</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="b : ${bookings}">
+                            <td th:text="${b.bookingDate} + ' ' + ${b.bookingTime}"></td>
+                            
+                            <td th:text="${b.client.name} + ' (' + ${b.client.phone} + ')'"></td>
+                            
+                            <td th:text="${b.service.name}"></td>
+                            
+                            <td th:text="${b.totalPrice} + ' грн'"></td>
+                            
+                            <td th:class="'status-' + ${b.status}" th:text="${b.status}"></td>
+                            
+                            <td>
+                                <form th:if="${b.status.name() == 'PAID'}" 
+                                      th:action="@{/web/bookings/{id}/complete(id=${b.bookingId})}" method="post">
+                                    <button type="submit" class="btn-primary" style="padding: 5px 10px; font-size: 12px;">
+                                        Завершити
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="footer" style="margin-top: 50px;">
+                <a href="/auth/login">Вийти</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -2,25 +2,87 @@
 <html lang="uk" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ласкаво просимо | Beauty Salon</title>
+    <title>Кабінет клієнта</title>
     <link rel="stylesheet" href="/css/beauty-salon.css">
+    <style>
+        /* Трохи стилів для таблиці */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f4f4f4; }
+        .btn-action { padding: 5px 10px; margin-right: 5px; cursor: pointer; border: none; color: white; border-radius: 4px;}
+        .btn-confirm { background-color: #28a745; }
+        .btn-pay { background-color: #007bff; }
+        .btn-complete { background-color: #17a2b8; }
+        .btn-cancel { background-color: #dc3545; }
+    </style>
 </head>
 <body>
-    <div class="dashboard-card">
-        <img src="https://www.emerce.nl/content/uploads/2019/08/beauty-Shutter.jpg" 
-             alt="Наш салон краси" class="salon-image" />
-        
+    <div class="dashboard-card" style="width: 80%; max-width: 1000px;">
         <div class="content">
-            <h1>Ласкаво просимо!</h1>
-            <p>Ви у найкращому салоні краси міста. Тут дбають про вашу красу та комфорт.</p>
-            
+            <h1>Особистий кабінет</h1>
             <div class="user-greeting">
-                Вітаємо, <span th:text="${loggedInUser?.name} ?: 'Гість'">Гість</span>!
+                Вітаємо, <span th:text="${user.name}">Клієнт</span>!
             </div>
+
+            <div style="margin: 20px 0;">
+                <a href="/web/bookings/new" class="btn-primary" style="text-decoration: none;">+ Новий запис</a>
+            </div>
+
+            <h3>Мої бронювання:</h3>
             
+            <div th:if="${#lists.isEmpty(user.bookings)}">
+                <p>У вас поки немає активних бронювань.</p>
+            </div>
+
+            <table th:if="${not #lists.isEmpty(user.bookings)}">
+                <thead>
+                    <tr>
+                        <th>Послуга</th>
+                        <th>Майстер</th>
+                        <th>Дата</th>
+                        <th>Ціна</th>
+                        <th>Статус</th>
+                        <th>Дії (State Pattern)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="booking : ${user.bookings}">
+                        <td th:text="${booking.service.name}"></td>
+                        <td th:text="${booking.master.specialization}"></td>
+                        <td th:text="${booking.bookingDate} + ' ' + ${booking.bookingTime}"></td>
+                        <td th:text="${booking.totalPrice} + ' грн'"></td>
+                        
+                        <td th:text="${booking.status}" style="font-weight: bold;"></td>
+                        
+                        <td>
+                            <div style="display: flex;">
+                                <form th:if="${booking.status.name() == 'PENDING'}" 
+                                      th:action="@{/web/bookings/{id}/confirm(id=${booking.bookingId})}" method="post">
+                                    <button type="submit" class="btn-action btn-confirm">Підтвердити</button>
+                                </form>
+
+                                <form th:if="${booking.status.name() == 'CONFIRMED'}" 
+                                      th:action="@{/web/bookings/{id}/pay(id=${booking.bookingId})}" method="post">
+                                    <button type="submit" class="btn-action btn-pay">Оплатити</button>
+                                </form>
+
+                                <form th:if="${booking.status.name() == 'PAID'}" 
+                                      th:action="@{/web/bookings/{id}/complete(id=${booking.bookingId})}" method="post">
+                                    <button type="submit" class="btn-action btn-complete">Завершити</button>
+                                </form>
+
+                                <form th:if="${booking.status.name() != 'CANCELLED' and booking.status.name() != 'COMPLETED'}" 
+                                      th:action="@{/web/bookings/{id}/cancel(id=${booking.bookingId})}" method="post">
+                                    <button type="submit" class="btn-action btn-cancel">Скасувати</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
             <div class="footer">
-                Ми завжди раді вас бачити
+                <a href="/auth/login">Вийти</a>
             </div>
         </div>
     </div>
