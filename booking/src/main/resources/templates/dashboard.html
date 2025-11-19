@@ -5,21 +5,94 @@
     <title>Кабінет клієнта</title>
     <link rel="stylesheet" href="/css/beauty-salon.css">
     <style>
-        /* Трохи стилів для таблиці */
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
         th { background-color: #f4f4f4; }
-        .btn-action { padding: 5px 10px; margin-right: 5px; cursor: pointer; border: none; color: white; border-radius: 4px;}
+
+        .btn-action { padding: 5px 10px; margin-right: 5px; cursor: pointer; border: none; color: white; border-radius: 4px; text-decoration: none; font-size: 13px;}
         .btn-confirm { background-color: #28a745; }
         .btn-pay { background-color: #007bff; }
         .btn-complete { background-color: #17a2b8; }
         .btn-cancel { background-color: #dc3545; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: -40px; right: 0;
+            color: white; font-size: 30px; cursor: pointer;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #007bff, #004080);
+            border-radius: 15px;
+            padding: 20px;
+            width: 350px;
+            height: auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card-chip {
+            width: 50px; height: 30px;
+            background-color: gold;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .card-form { display: flex; flex-direction: column; gap: 15px; }
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        .input-group label { font-weight: bold; font-size: 12px; }
+
+        .input-group input {
+            padding: 8px;
+            border: none; border-radius: 5px; font-size: 14px;
+            outline: none; background: rgba(255, 255, 255, 0.2); color: white;
+        }
+
+        .input-group input::placeholder { color: rgba(255, 255, 255, 0.7); }
+
+        .flex-row { display: flex; justify-content: space-between; gap: 10px; }
+        .half { width: 48%; }
+
+        .btn-submit-pay {
+            padding: 10px; background-color: #28a745; color: white;
+            border: none; border-radius: 5px; font-size: 16px;
+            cursor: pointer; transition: background-color 0.3s ease; margin-top: 10px;
+        }
+
+        .btn-submit-pay:hover { background-color: #218838; }
+
+        .payment-amount { text-align: center; font-size: 1.2em; margin-bottom: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="dashboard-card" style="width: 80%; max-width: 1000px;">
         <div class="content">
             <h1>Особистий кабінет</h1>
+
+            <div th:if="${success}" style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #c3e6cb;">
+                <span th:text="${success}"></span>
+            </div>
+            <div th:if="${error}" style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #f5c6cb;">
+                <span th:text="${error}"></span>
+            </div>
+
             <div class="user-greeting">
                 Вітаємо, <span th:text="${user.name}">Клієнт</span>!
             </div>
@@ -29,7 +102,7 @@
             </div>
 
             <h3>Мої бронювання:</h3>
-            
+
             <div th:if="${#lists.isEmpty(user.bookings)}">
                 <p>У вас поки немає активних бронювань.</p>
             </div>
@@ -42,39 +115,47 @@
                         <th>Дата</th>
                         <th>Ціна</th>
                         <th>Статус</th>
-                        <th>Дії (State Pattern)</th>
+                        <th>Дії</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr th:each="booking : ${user.bookings}">
                         <td th:text="${booking.service.name}"></td>
-                        <td th:text="${booking.master.specialization}"></td>
+                        <td th:text="${booking.master.user.name}"></td>
                         <td th:text="${booking.bookingDate} + ' ' + ${booking.bookingTime}"></td>
                         <td th:text="${booking.totalPrice} + ' грн'"></td>
-                        
                         <td th:text="${booking.status}" style="font-weight: bold;"></td>
-                        
                         <td>
-                            <div style="display: flex;">
-                                <form th:if="${booking.status.name() == 'PENDING'}" 
+                            <div style="display: flex; gap: 5px;">
+                                <form th:if="${booking.status.name() == 'PENDING'}"
                                       th:action="@{/web/bookings/{id}/confirm(id=${booking.bookingId})}" method="post">
                                     <button type="submit" class="btn-action btn-confirm">Підтвердити</button>
                                 </form>
 
-                                <form th:if="${booking.status.name() == 'CONFIRMED'}" 
-                                      th:action="@{/web/bookings/{id}/pay(id=${booking.bookingId})}" method="post">
-                                    <button type="submit" class="btn-action btn-pay">Оплатити</button>
-                                </form>
+                                <button th:if="${booking.status.name() == 'CONFIRMED'}"
+                                        type="button"
+                                        class="btn-action btn-pay"
+                                        th:onclick="openPaymentModal([[${booking.bookingId}]], [[${booking.totalPrice}]])">
+                                    Оплатити
+                                </button>
 
-                                <form th:if="${booking.status.name() == 'PAID'}" 
+                                <form th:if="${booking.status.name() == 'PAID'}"
                                       th:action="@{/web/bookings/{id}/complete(id=${booking.bookingId})}" method="post">
                                     <button type="submit" class="btn-action btn-complete">Завершити</button>
                                 </form>
 
-                                <form th:if="${booking.status.name() != 'CANCELLED' and booking.status.name() != 'COMPLETED'}" 
+                                <form th:if="${booking.status.name() != 'CANCELLED' and booking.status.name() != 'COMPLETED'}"
                                       th:action="@{/web/bookings/{id}/cancel(id=${booking.bookingId})}" method="post">
                                     <button type="submit" class="btn-action btn-cancel">Скасувати</button>
                                 </form>
+
+                                <a th:if="${booking.status.name() == 'PAID' or booking.status.name() == 'COMPLETED' or (booking.status.name() == 'CANCELLED' and booking.payment != null)}"
+                                   th:href="@{/web/bookings/{id}/receipt(id=${booking.bookingId})}"
+                                   target="_blank"
+                                   class="btn-action"
+                                   style="background-color: #6c757d; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                                   📄
+                                </a>
                             </div>
                         </td>
                     </tr>
@@ -86,5 +167,62 @@
             </div>
         </div>
     </div>
+
+    <div id="paymentModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closePaymentModal()">&times;</span>
+
+            <div class="card">
+                <div class="payment-amount" id="modalAmountDisplay">До сплати: 0 грн</div>
+                <div class="card-chip"></div>
+
+                <form id="cardForm" class="card-form" method="post">
+                    <input type="hidden" name="paymentMethod" value="CARD">
+                    <div class="input-group">
+                        <label for="card-number">Номер картки</label>
+                        <input type="text" id="card-number" name="cardNumber" placeholder="XXXX XXXX XXXX XXXX" required maxlength="19">
+                    </div>
+
+                    <div class="flex-row">
+                        <div class="input-group half">
+                            <label for="expiry-date">Термін дії</label>
+                            <input type="text" id="expiry-date" placeholder="MM/RR" required maxlength="5">
+                        </div>
+                        <div class="input-group half">
+                            <label for="cvv">CVV</label>
+                            <input type="password" id="cvv" placeholder="XXX" required maxlength="3">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit-pay">Підтвердити оплату</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('paymentModal');
+        const cardForm = document.getElementById('cardForm');
+        const amountDisplay = document.getElementById('modalAmountDisplay');
+
+        function openPaymentModal(bookingId, price) {
+            amountDisplay.textContent = 'До сплати: ' + price + ' грн';
+            cardForm.action = '/web/bookings/' + bookingId + '/pay';
+            modal.style.display = 'flex';
+        }
+
+        function closePaymentModal() {
+            modal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                closePaymentModal();
+            }
+        }
+
+        document.getElementById('card-number').addEventListener('input', function (e) {
+            e.target.value = e.target.value.replace(/[^\d]/g, '').replace(/(.{4})/g, '$1 ').trim();
+        });
+    </script>
 </body>
 </html>

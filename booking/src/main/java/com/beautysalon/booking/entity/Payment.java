@@ -25,8 +25,8 @@ public class Payment {
     private String paymentMethod;
     private String paymentStatus;
     private LocalDateTime paymentDate;
+    private String cardNumber;
 
-    // Конструктори
     public Payment() {}
 
     public Payment(Booking booking, double amount, String paymentMethod, String paymentStatus, LocalDateTime paymentDate) {
@@ -37,7 +37,6 @@ public class Payment {
         this.paymentDate = paymentDate;
     }
 
-    // Геттери та Сеттери
     public UUID getPaymentId() {
         return paymentId;
     }
@@ -84,5 +83,13 @@ public class Payment {
 
     public void setPaymentDate(LocalDateTime paymentDate) {
         this.paymentDate = paymentDate;
+    }
+
+    public String getCardNumber() {
+        return cardNumber;
+    }
+
+    public void setCardNumber(String cardNumber) {
+        this.cardNumber = cardNumber;
     }
 }

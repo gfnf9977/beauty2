@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -98,8 +100,11 @@ public class BookingWebController {
     }
 
     @PostMapping("/{id}/pay")
-    public String payBooking(@PathVariable UUID id) {
-        paymentFacade.payForBooking(id, "LiqPay");
+    public String payBooking(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "LiqPay") String paymentMethod,
+            @RequestParam String cardNumber) {
+        paymentFacade.payForBooking(id, paymentMethod, cardNumber);
         return "redirect:/auth/home";
     }
 
@@ -110,9 +115,35 @@ public class BookingWebController {
     }
 
     @PostMapping("/{id}/cancel")
-    public String cancelBooking(@PathVariable UUID id) {
-        bookingService.cancelBooking(id);
+    public String cancelBooking(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            Booking cancelledBooking = bookingService.cancelBooking(id);
+
+            if (cancelledBooking.getPayment() != null && "PAID".equals(cancelledBooking.getPayment().getPaymentStatus())) {
+                String refundMessage = paymentFacade.refundBooking(id);
+                redirectAttributes.addFlashAttribute("success", "Бронювання скасовано. " + refundMessage);
+            } else {
+                redirectAttributes.addFlashAttribute("success", "Бронювання успішно скасовано.");
+            }
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Помилка скасування: " + e.getMessage());
+        }
+
         return "redirect:/auth/home";
+    }
+
+    @GetMapping("/{id}/receipt")
+    public String getBookingReceipt(@PathVariable UUID id, Model model, HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+
+        Booking booking = bookingService.findBookingById(id)
+                .orElseThrow(() -> new RuntimeException("Бронювання не знайдено"));
+
+        model.addAttribute("booking", booking);
+        model.addAttribute("payment", booking.getPayment());
+
+        return "receipt";
     }
 
     @GetMapping("/masters/by-service/{serviceId}")
@@ -172,27 +203,21 @@ public class BookingWebController {
     public ResponseEntity<List<Map<String, Object>>> getDetailedSlotsForMaster(
             @PathVariable UUID masterId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-
         List<Schedule> masterSchedules = scheduleRepository.findByMasterMasterIdAndWorkDate(masterId, date);
         List<Map<String, Object>> slotDetails = new ArrayList<>();
-
         if (masterSchedules.isEmpty()) {
             return new ResponseEntity<>(List.of(), HttpStatus.OK);
         }
-
         Schedule schedule = masterSchedules.get(0);
         LocalTime workStart = schedule.getStartTime();
         LocalTime workEnd = schedule.getEndTime();
         Set<LocalTime> occupiedSlots = bookingService.getOccupiedSlots(masterId, date);
-
         for (int hour = 8; hour < 20; hour++) {
             LocalTime slotTime = LocalTime.of(hour, 0);
             boolean isWorkingBoundary = !slotTime.isBefore(workStart) && slotTime.plusHours(1).isBefore(workEnd.plusNanos(1));
-
             Map<String, Object> detail = new HashMap<>();
             detail.put("time", slotTime.toString());
             detail.put("isWorkingBoundary", isWorkingBoundary);
-
             if (!isWorkingBoundary) {
                 detail.put("status", "OUT_OF_HOURS");
             } else if (occupiedSlots.contains(slotTime)) {
@@ -205,10 +230,8 @@ public class BookingWebController {
             } else {
                 detail.put("status", "AVAILABLE");
             }
-
             slotDetails.add(detail);
         }
-
         return new ResponseEntity<>(slotDetails, HttpStatus.OK);
     }
 }

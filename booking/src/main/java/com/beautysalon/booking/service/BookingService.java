@@ -192,4 +192,8 @@ public class BookingService {
     public Optional<Booking> getBookingByMasterAndDateTime(UUID masterId, LocalDate date, LocalTime time) {
         return bookingRepository.findByMasterMasterIdAndBookingDateAndBookingTime(masterId, date, time);
     }
+
+    public Optional<Booking> findBookingById(UUID id) {
+        return bookingRepository.findById(id);
+    }    
 }

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="uk" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Квитанція про оплату</title>
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; background-color: #f4f4f4; padding: 40px; }
+        .receipt {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border: 1px solid #ddd;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 20px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .label { font-weight: bold; }
+        .total-section { border-top: 2px dashed #333; padding-top: 10px; margin-top: 20px; font-size: 1.2em; font-weight: bold; text-align: right; }
+        .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #777; }
+        
+        .status-refunded { color: red; border: 2px solid red; display: inline-block; padding: 5px 10px; transform: rotate(-5deg); margin-top: 10px; }
+        .status-paid { color: green; }
+
+        /* Кнопка друку, яка зникає на папері */
+        @media print {
+            .no-print { display: none; }
+            body { background-color: white; padding: 0; }
+            .receipt { box-shadow: none; border: none; }
+        }
+        .btn-print {
+            display: block; width: 100%; padding: 15px; background: #333; color: white; 
+            text-align: center; text-decoration: none; font-family: sans-serif; margin-bottom: 20px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <button onclick="window.print()" class="btn-print no-print">🖨️ Друкувати / Зберегти як PDF</button>
+
+    <div class="receipt">
+        <div class="header">
+            <h1>Beauty Salon</h1>
+            <p>Електронна квитанція</p>
+            <div th:if="${payment != null and payment.paymentStatus == 'REFUNDED'}" class="status-refunded">
+                ПОВЕРНЕННЯ КОШТІВ
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="info-row">
+                <span class="label">Квитанція №:</span>
+                <span th:text="${payment != null ? #strings.substring(payment.paymentId, 0, 8) : '-'}"></span>
+            </div>
+            <div class="info-row">
+                <span class="label">Дата транзакції:</span>
+                <span th:text="${payment != null ? #temporals.format(payment.paymentDate, 'dd.MM.yyyy HH:mm') : '-'}"></span>
+            </div>
+            <div class="info-row">
+                <span class="label">ID Бронювання:</span>
+                <span th:text="${#strings.substring(booking.bookingId, 0, 8)}"></span>
+            </div>
+            
+            <hr style="border: 0; border-bottom: 1px solid #eee; margin: 20px 0;">
+
+            <div class="info-row">
+                <span class="label">Клієнт:</span>
+                <span th:text="${booking.client.name}"></span>
+            </div>
+            <div class="info-row">
+                <span class="label">Послуга:</span>
+                <span th:text="${booking.service.name}"></span>
+            </div>
+            <div class="info-row">
+                <span class="label">Майстер:</span>
+                <span th:text="${booking.master.user.name}"></span>
+            </div>
+
+            <hr style="border: 0; border-bottom: 1px solid #eee; margin: 20px 0;">
+
+            <div class="info-row">
+                <span class="label">Метод оплати:</span>
+                <span th:text="${payment != null ? payment.paymentMethod : '-'}">CARD</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Картка:</span>
+                <!-- Тут покажемо маскований номер, якщо він є -->
+                <span th:text="${payment != null and payment.cardNumber != null ? '**** ' + #strings.substring(payment.cardNumber, payment.cardNumber.length() - 4) : '****'}"></span>
+            </div>
+            
+            <div class="total-section">
+                СУМА: <span th:text="${booking.totalPrice}">0.00</span> грн
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Дякуємо, що обрали наш салон!</p>
+            <p>Цей документ сформовано автоматично системою.</p>
+        </div>
+    </div>
+
+</body>
+</html>
