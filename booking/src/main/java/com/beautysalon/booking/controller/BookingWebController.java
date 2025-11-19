@@ -8,16 +8,20 @@ import com.beautysalon.booking.repository.IServiceRepository;
 import com.beautysalon.booking.service.BookingService;
 import com.beautysalon.booking.service.PaymentFacade;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Controller
@@ -40,13 +44,12 @@ public class BookingWebController {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
-        // Отримуємо унікальні назви для фільтрації на фронтенді
         Set<String> uniqueServiceNames = serviceRepository.findAll().stream()
             .map(com.beautysalon.booking.entity.Service::getName)
             .collect(Collectors.toSet());
 
         model.addAttribute("uniqueServiceNames", uniqueServiceNames);
-        model.addAttribute("masters", masterRepository.findAll()); // Поки передаємо всіх
+        model.addAttribute("masters", masterRepository.findAll());
         return "booking_create";
     }
 
@@ -54,15 +57,16 @@ public class BookingWebController {
     public String createBooking(
             @RequestParam String serviceName,
             @RequestParam UUID masterId,
-            @RequestParam String dateTime,
+            @RequestParam String bookingDate,
+            @RequestParam String bookingTime,
             HttpSession session,
             Model model) {
 
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
-        // КРОК 1: Знаходимо потрібний serviceId на основі Name та MasterId
-        // Це гарантує, що ми отримуємо serviceId, який *дійсно* прив'язаний до обраного masterId
+        LocalDateTime finalDateTime = LocalDateTime.parse(bookingDate + "T" + bookingTime);
+
         List<com.beautysalon.booking.entity.Service> services = serviceRepository.findByName(serviceName);
         UUID finalServiceId = services.stream()
             .filter(s -> s.getMaster() != null && s.getMaster().getMasterId().equals(masterId))
@@ -71,16 +75,15 @@ public class BookingWebController {
             .orElseThrow(() -> new RuntimeException("Не вдалося знайти конкретну послугу, прив'язану до обраного майстра."));
 
         try {
-            // Тут спрацює Ланцюжок, Компонувальник і Спостерігач
-            bookingService.createBooking(user.getUserId(), finalServiceId, masterId, LocalDateTime.parse(dateTime));
+            bookingService.createBooking(user.getUserId(), finalServiceId, masterId, finalDateTime);
             return "redirect:/auth/home";
         } catch (Exception e) {
             model.addAttribute("error", "Помилка створення: " + e.getMessage());
 
-            // Повторне завантаження даних для форми
             Set<String> uniqueServiceNames = serviceRepository.findAll().stream()
                 .map(com.beautysalon.booking.entity.Service::getName)
                 .collect(Collectors.toSet());
+
             model.addAttribute("uniqueServiceNames", uniqueServiceNames);
             model.addAttribute("masters", masterRepository.findAll());
             return "booking_create";
@@ -95,7 +98,6 @@ public class BookingWebController {
 
     @PostMapping("/{id}/pay")
     public String payBooking(@PathVariable UUID id) {
-        // Викликаємо Фасад! (ЛР7)
         paymentFacade.payForBooking(id, "LiqPay");
         return "redirect:/auth/home";
     }
@@ -112,24 +114,19 @@ public class BookingWebController {
         return "redirect:/auth/home";
     }
 
-    // === ФІКС ПОМИЛКИ КОМПІЛЯЦІЇ / AJAX API ===
-
     @GetMapping("/masters/by-service/{serviceId}")
     @ResponseBody
     public ResponseEntity<List<Master>> getMastersByService(@PathVariable UUID serviceId) {
-        // Цей метод використовувався раніше, але зараз він частково дублює логіку
-        // і буде видавати хибний результат, якщо є 1+ Master.
-        // Ми залишаємо його для зворотної сумісності, але використовуємо findById.
         Optional<com.beautysalon.booking.entity.Service> serviceOpt = serviceRepository.findById(serviceId);
 
         if (serviceOpt.isPresent()) {
             Master master = serviceOpt.get().getMaster();
-            
+
             if (master != null) {
                 return new ResponseEntity<>(List.of(master), HttpStatus.OK);
             }
         }
-        
+
         return new ResponseEntity<>(List.of(), HttpStatus.OK);
     }
 
@@ -140,14 +137,41 @@ public class BookingWebController {
         if (services.isEmpty()) {
             return new ResponseEntity<>(List.of(), HttpStatus.OK);
         }
-        
-        // Збираємо унікальний список майстрів з усіх знайдених послуг
+
         List<Master> availableMasters = services.stream()
             .map(com.beautysalon.booking.entity.Service::getMaster)
             .filter(master -> master != null)
             .distinct()
             .collect(Collectors.toList());
-            
+
         return new ResponseEntity<>(availableMasters, HttpStatus.OK);
+    }
+
+    @GetMapping("/slots/available")
+    @ResponseBody
+    public ResponseEntity<List<String>> getAvailableTimeSlots(
+            @RequestParam UUID masterId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+
+        List<LocalTime> allWorkingSlots = new ArrayList<>();
+        for (int hour = 8; hour < 20; hour++) {
+            allWorkingSlots.add(LocalTime.of(hour, 0));
+        }
+
+        Set<LocalTime> occupiedSlots = bookingService.getOccupiedSlots(masterId, date);
+
+        List<String> availableSlots = allWorkingSlots.stream()
+            .filter(slot -> !occupiedSlots.contains(slot))
+            .map(LocalTime::toString)
+            .collect(Collectors.toList());
+
+        return new ResponseEntity<>(availableSlots, HttpStatus.OK);
+    }
+
+    @GetMapping("/dates/working/{masterId}")
+    @ResponseBody
+    public ResponseEntity<List<LocalDate>> getMasterWorkingDates(@PathVariable UUID masterId) {
+        List<LocalDate> workingDates = bookingService.getMasterWorkingDates(masterId);
+        return new ResponseEntity<>(workingDates, HttpStatus.OK);
     }
 }

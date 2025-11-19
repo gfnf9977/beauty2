@@ -4,14 +4,42 @@
     <meta charset="UTF-8">
     <title>Створити бронювання</title>
     <link rel="stylesheet" href="/css/beauty-salon.css">
+    <style>
+        .slot-btn {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            background-color: #f8f8f8;
+            transition: all 0.2s;
+            width: 80px;
+        }
+        .slot-btn.occupied {
+            background-color: #f0f0f0;
+            color: #999;
+            cursor: not-allowed;
+            border-color: #eee;
+        }
+        .slot-btn.available:hover {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        .slot-btn.available.selected {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+            font-weight: bold;
+            transform: scale(1.05);
+        }
+    </style>
 </head>
 <body>
     <div class="auth-card" style="max-width: 600px;">
         <h1>Записатися на послугу</h1>
-
         <div class="error" th:if="${error}" th:text="${error}" style="color: red; margin-bottom: 15px;"></div>
         <form th:action="@{/web/bookings/create}" method="post">
-
             <div class="form-group">
                 <label>Оберіть послугу:</label>
                 <select name="serviceName" id="serviceNameSelect" required>
@@ -21,20 +49,24 @@
                             th:text="${name}"></option>
                 </select>
             </div>
-
             <div class="form-group">
                 <label>Доступні майстри:</label>
                 <select name="masterId" id="masterSelect" required>
                     <option value="">-- Оберіть послугу спочатку --</option>
                 </select>
             </div>
-
             <div class="form-group">
-                <label>Дата та час:</label>
-                <input type="datetime-local" name="dateTime" required
-                       th:value="${#temporals.format(#temporals.createNow().plusDays(1), 'yyyy-MM-dd''T''10:00')}">
+                <label>Дата:</label>
+                <input type="date" name="bookingDate" id="bookingDateSelect" required
+                       th:value="${#temporals.format(#temporals.createNow().plusDays(1), 'yyyy-MM-dd')}">
             </div>
-            
+            <div class="form-group">
+                <label>Час (Годинні слоти):</label>
+                <div id="timeSlotsContainer" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px;">
+                    <span style="color: #999;">-- Оберіть майстра та дату --</span>
+                </div>
+                <input type="hidden" name="bookingTime" id="bookingTimeHidden" required />
+            </div>
             <button type="submit" class="btn-primary">Забронювати</button>
             <a href="/auth/home" class="links">Назад</a>
         </form>
@@ -43,46 +75,64 @@
     <script>
         const serviceNameSelect = document.getElementById('serviceNameSelect');
         const masterSelect = document.getElementById('masterSelect');
-        
-        // serviceIdHiddenInput більше не потрібен
+        const bookingDateSelect = document.getElementById('bookingDateSelect');
+        const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+        const bookingTimeHidden = document.getElementById('bookingTimeHidden');
+        let masterWorkingDates = [];
+
+        function fetchWorkingDates(masterId) {
+            masterWorkingDates = [];
+
+            fetch(`/web/bookings/dates/working/${masterId}`)
+                .then(response => response.json())
+                .then(dates => {
+                    masterWorkingDates = dates.map(d => d.toString());
+
+                    if (bookingDateSelect.value) {
+                        updateAvailableSlots();
+                    }
+                })
+                .catch(error => {
+                    console.error('Помилка отримання робочих дат:', error);
+                    masterWorkingDates = [];
+                });
+        }
 
         function updateMastersByServiceName() {
             const selectedServiceName = serviceNameSelect.value;
-
             masterSelect.innerHTML = '<option value="">-- Оберіть майстра --</option>';
-            // serviceIdHiddenInput.value = ''; // Видалено
+            timeSlotsContainer.innerHTML = '<span style="color: #999;">-- Оберіть майстра та дату --</span>';
+            bookingTimeHidden.value = '';
 
             if (!selectedServiceName) {
                 return;
             }
 
-            // 1. AJAX-ЗАПИТ: URL тепер містить закодовану назву послуги
             fetch('/web/bookings/masters/by-service-name/' + encodeURIComponent(selectedServiceName))
-                .then(response => {
-                    if (!response.ok) { 
-                        throw new Error('Помилка сервера'); 
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(masters => {
                     if (masters.length > 0) {
                         masters.forEach(master => {
                             const option = document.createElement('option');
-                            
-                            // МИ ПОВИННІ ВИКОРИСТОВУВАТИ ТІЛЬКИ masterId. Controller зробить решту.
-                            option.value = master.masterId; 
+                            option.value = master.masterId;
                             option.textContent = master.user.name + ' (' + master.specialization + ')';
                             masterSelect.appendChild(option);
                         });
 
-                        // Автоматично обираємо єдиного доступного майстра (якщо такий є)
-                        if (masterSelect.options.length === 2) { // 1 - це дефолтна опція
+                        if (masterSelect.options.length === 2) {
                             masterSelect.options[1].selected = true;
                         }
                     } else {
                         const option = document.createElement('option');
                         option.textContent = 'Немає доступних майстрів';
                         masterSelect.appendChild(option);
+                    }
+
+                    const masterId = masterSelect.value;
+                    if (masterId) {
+                        fetchWorkingDates(masterId);
+                    } else {
+                        updateAvailableSlots();
                     }
                 })
                 .catch(error => {
@@ -91,10 +141,80 @@
                 });
         }
 
+        function updateAvailableSlots() {
+            const masterId = masterSelect.value;
+            const date = bookingDateSelect.value;
+            timeSlotsContainer.innerHTML = '<span style="color: #999;">-- Оновлення слотів --</span>';
+            bookingTimeHidden.value = '';
+
+            if (!masterId || !date) {
+                timeSlotsContainer.innerHTML = '<span style="color: #999;">-- Оберіть майстра та дату --</span>';
+                return;
+            }
+
+            if (masterWorkingDates.length > 0 && !masterWorkingDates.includes(date)) {
+                timeSlotsContainer.innerHTML = '<span style="color: red; font-weight: bold;">⛔ Майстер не працює ' + date + '!</span>';
+                return;
+            }
+
+            if (masterWorkingDates.length === 0) {
+                timeSlotsContainer.innerHTML = '<span style="color: orange;">⚠ Завантаження розкладу...</span>';
+                return;
+            }
+
+            fetch(`/web/bookings/slots/available?masterId=${masterId}&date=${date}`)
+                .then(response => response.json())
+                .then(availableSlots => {
+                    timeSlotsContainer.innerHTML = '';
+
+                    const allSlots = Array.from({length: 12}, (_, i) => {
+                        const hour = 8 + i;
+                        return (hour < 10 ? '0' : '') + hour + ':00';
+                    });
+
+                    if (allSlots.length > 0) {
+                        allSlots.forEach(slot => {
+                            const isAvailable = availableSlots.includes(slot);
+
+                            const slotElement = document.createElement('button');
+                            slotElement.type = 'button';
+                            slotElement.textContent = slot;
+                            slotElement.className = 'slot-btn ' + (isAvailable ? 'available' : 'occupied');
+                            slotElement.disabled = !isAvailable;
+
+                            if (isAvailable) {
+                                slotElement.addEventListener('click', function() {
+                                    document.querySelectorAll('.slot-btn.available').forEach(btn => {
+                                        btn.classList.remove('selected');
+                                    });
+                                    this.classList.add('selected');
+                                    bookingTimeHidden.value = slot;
+                                });
+                            }
+                            timeSlotsContainer.appendChild(slotElement);
+                        });
+                    } else {
+                        timeSlotsContainer.innerHTML = '<span style="color: red;">На цю дату немає вільних слотів.</span>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Помилка завантаження слотів:', error);
+                    timeSlotsContainer.innerHTML = '<span style="color: red;">Помилка завантаження слотів.</span>';
+                });
+        }
+
+        masterSelect.addEventListener('change', function() {
+            fetchWorkingDates(masterSelect.value);
+            updateAvailableSlots();
+        });
+
+        bookingDateSelect.addEventListener('change', updateAvailableSlots);
         serviceNameSelect.addEventListener('change', updateMastersByServiceName);
 
         if (serviceNameSelect.value) {
             updateMastersByServiceName();
+        } else if (masterSelect.value && bookingDateSelect.value) {
+            updateAvailableSlots();
         }
     </script>
 </body>
