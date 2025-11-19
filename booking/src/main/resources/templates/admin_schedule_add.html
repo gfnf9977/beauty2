@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="uk" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="'Додати розклад: ' + ${master.user.name}">Додати робочий день</title>
+    <link rel="stylesheet" href="/css/beauty-salon.css">
+    <style>
+        .schedule-header { background-color: #28a745; color: white; padding: 15px; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-card" style="max-width: 600px;">
+        <div class="content">
+            <div class="schedule-header">
+                <h2 th:text="'Додати робочий день для: ' + ${master.user.name}"></h2>
+                <p th:text="'Спеціалізація: ' + ${master.specialization}"></p>
+            </div>
+            
+            <div class="error" th:if="${error}" th:text="${error}" style="color: red; margin: 15px 0;"></div>
+
+            <form th:action="@{/web/admin/masters/{userId}/schedule/add(userId=${master.user.userId})}" method="post" style="margin-top: 20px;">
+                
+                <div class="form-group">
+                    <label for="workDate">Дата:</label>
+                    <input type="date" id="workDate" name="workDate" required 
+                           th:min="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}"
+                           th:value="${#temporals.format(#temporals.createNow().plusDays(1), 'yyyy-MM-dd')}">
+                </div>
+
+                <div class="form-group">
+                    <label for="startTime">Час початку:</label>
+                    <input type="time" id="startTime" name="startTime" value="09:00" step="3600" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="endTime">Час закінчення:</label>
+                    <input type="time" id="endTime" name="endTime" value="18:00" step="3600" required>
+                </div>
+
+                <button type="submit" class="btn-primary" style="background-color: #28a745; margin-top: 15px;">Зберегти робочий день</button>
+            </form>
+
+            <a th:href="@{/web/admin/masters/{id}/schedule(id=${master.user.userId})}" class="btn-primary" style="background-color: #6c757d; text-decoration: none; margin-top: 15px; display: inline-block;">← Назад до розкладу</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -50,8 +50,15 @@ public class BookingService {
         clientHandler.setNext(masterHandler);
         masterHandler.setNext(serviceHandler);
         serviceHandler.setNext(compatibilityHandler);
-
         this.validationChain = clientHandler;
+    }
+
+    private Set<LocalTime> getAllPossibleSlots() {
+        Set<LocalTime> allSlots = new HashSet<>();
+        for (int hour = 8; hour < 20; hour++) {
+            allSlots.add(LocalTime.of(hour, 0));
+        }
+        return allSlots;
     }
 
     public Set<LocalTime> getOccupiedSlots(UUID masterId, LocalDate date) {
@@ -65,11 +72,30 @@ public class BookingService {
 
             int durationMinutes = booking.getService().getDurationMinutes();
             LocalTime startTime = booking.getBookingTime().truncatedTo(ChronoUnit.HOURS);
-
             int numberOfSlots = durationMinutes / 60;
-
             for (int i = 0; i < numberOfSlots; i++) {
                 occupiedSlots.add(startTime.plusHours(i));
+            }
+        }
+
+        List<Schedule> masterSchedules = scheduleRepository.findByMasterMasterIdAndWorkDate(masterId, date);
+
+        if (masterSchedules.isEmpty()) {
+            return getAllPossibleSlots();
+        }
+
+        Schedule schedule = masterSchedules.get(0);
+        LocalTime workStart = schedule.getStartTime();
+        LocalTime workEnd = schedule.getEndTime();
+
+        Set<LocalTime> allPossibleSlots = getAllPossibleSlots();
+
+        for (LocalTime slot : allPossibleSlots) {
+            int minServiceDurationHours = 1;
+            LocalTime slotEnd = slot.plusHours(minServiceDurationHours);
+
+            if (slot.isBefore(workStart) || slotEnd.isAfter(workEnd)) {
+                occupiedSlots.add(slot);
             }
         }
 
@@ -81,10 +107,8 @@ public class BookingService {
     }
 
     public Booking createBooking(UUID clientId, UUID serviceId, UUID masterId, LocalDateTime desiredDateTime) {
-        BookingValidationContext context = new BookingValidationContext(
-                clientId, masterId, serviceId, desiredDateTime);
+        BookingValidationContext context = new BookingValidationContext(clientId, masterId, serviceId, desiredDateTime);
         validationChain.handle(context);
-
         if (context.hasError()) {
             throw new RuntimeException(context.getErrorMessage());
         }
@@ -163,5 +187,9 @@ public class BookingService {
 
     public void notifyPaymentObservers(Booking booking) {
         eventPublisher.notifyObservers(booking);
+    }
+
+    public Optional<Booking> getBookingByMasterAndDateTime(UUID masterId, LocalDate date, LocalTime time) {
+        return bookingRepository.findByMasterMasterIdAndBookingDateAndBookingTime(masterId, date, time);
     }
 }

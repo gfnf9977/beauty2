@@ -2,16 +2,24 @@ package com.beautysalon.booking.controller;
 
 import com.beautysalon.booking.entity.Role;
 import com.beautysalon.booking.entity.User;
+import com.beautysalon.booking.entity.Master;
+import com.beautysalon.booking.entity.Booking;
+import com.beautysalon.booking.dto.ScheduleDayDto;
 import com.beautysalon.booking.service.UserService;
 import com.beautysalon.booking.service.MasterService;
 import com.beautysalon.booking.service.BookingService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.time.YearMonth;
+import java.util.List;
+import java.util.UUID;
 
 @Controller
 @RequestMapping("/auth")
@@ -26,13 +34,11 @@ public class AuthController {
         this.bookingService = bookingService;
     }
 
-    // === Сторінка входу ===
     @GetMapping("/login")
     public String showLoginForm() {
         return "auth_login";
     }
 
-    // === Обробка логіну (З ЛОГІКОЮ РОЛЕЙ) ===
     @PostMapping("/login")
     public String loginUser(
             @RequestParam("email") String email,
@@ -41,10 +47,8 @@ public class AuthController {
             RedirectAttributes redirectAttributes,
             HttpSession session) {
         User user = userService.login(email, password);
-
         if (user != null) {
             session.setAttribute("loggedInUser", user);
-
             if (user.getRole() == Role.ADMIN) {
                 return "redirect:/auth/admin/dashboard";
             } else if (user.getRole() == Role.MASTER) {
@@ -58,7 +62,6 @@ public class AuthController {
         }
     }
 
-    // === Сторінка реєстрації ===
     @GetMapping("/register")
     public String showRegisterForm(Model model) {
         if (!model.containsAttribute("user")) {
@@ -67,7 +70,6 @@ public class AuthController {
         return "register";
     }
 
-    // === Обробка реєстрації ===
     @PostMapping("/register")
     public String registerUser(
             @Valid @ModelAttribute("user") User user,
@@ -88,7 +90,6 @@ public class AuthController {
         return "redirect:/auth/login";
     }
 
-    // === ДАШБОРД КЛІЄНТА ===
     @GetMapping("/home")
     public String showHomePage(HttpSession session, Model model) {
         User loggedInUser = (User) session.getAttribute("loggedInUser");
@@ -101,7 +102,6 @@ public class AuthController {
         }
     }
 
-    // === ДАШБОРД АДМІНА ===
     @GetMapping("/admin/dashboard")
     public String showAdminDashboard(HttpSession session, Model model) {
         User loggedInUser = (User) session.getAttribute("loggedInUser");
@@ -113,30 +113,37 @@ public class AuthController {
         }
     }
 
-    // === ДАШБОРД МАЙСТРА ===
     @GetMapping("/master/dashboard")
-    public String showMasterDashboard(HttpSession session, Model model) {
+    public String showMasterDashboard(
+            HttpSession session,
+            Model model,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month) {
+
         User loggedInUser = (User) session.getAttribute("loggedInUser");
-        if (loggedInUser != null && loggedInUser.getRole() == Role.MASTER) {
-            try {
-                // 1. Знаходимо профіль майстра
-                com.beautysalon.booking.entity.Master masterProfile =
-                    masterService.findMasterByUser(loggedInUser.getUserId());
-
-                // 2. Знаходимо список бронювань
-                java.util.List<com.beautysalon.booking.entity.Booking> bookings =
-                    bookingService.getBookingsByMaster(masterProfile.getMasterId());
-
-                model.addAttribute("master", masterProfile);
-                model.addAttribute("bookings", bookings);
-
-                return "master_dashboard";
-            } catch (Exception e) {
-                model.addAttribute("error", "Помилка завантаження профілю: " + e.getMessage());
-                return "auth_login";
-            }
-        } else {
+        if (loggedInUser == null || loggedInUser.getRole() != Role.MASTER) {
             return "redirect:/auth/login";
+        }
+
+        try {
+            Master masterProfile = masterService.findMasterByUser(loggedInUser.getUserId());
+            UUID masterId = masterProfile.getMasterId();
+
+            List<Booking> bookings = bookingService.getBookingsByMaster(masterId);
+
+            YearMonth currentMonth = month == null ? YearMonth.now() : month;
+            List<ScheduleDayDto> monthlySchedule = masterService.getMonthlyScheduleView(masterProfile.getMasterId(), currentMonth);
+
+            model.addAttribute("master", masterProfile);
+            model.addAttribute("bookings", bookings);
+            model.addAttribute("monthlySchedule", monthlySchedule);
+            model.addAttribute("currentMonth", currentMonth);
+            model.addAttribute("nextMonth", currentMonth.plusMonths(1));
+            model.addAttribute("prevMonth", currentMonth.minusMonths(1));
+
+            return "master_dashboard";
+        } catch (RuntimeException e) {
+            model.addAttribute("error", "Помилка завантаження розкладу: " + e.getMessage());
+            return "auth/login";
         }
     }
 }

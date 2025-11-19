@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="uk" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="'Розклад: ' + ${master.user.name}">Розклад</title>
+    <link rel="stylesheet" href="/css/beauty-salon.css">
+    <style>
+        .schedule-header { background-color: #007bff; color: white; padding: 15px; border-radius: 6px; }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr); /* 7 днів тижня */
+            gap: 5px;
+            margin-top: 20px;
+        }
+        .day-header {
+            text-align: center;
+            font-weight: bold;
+            padding: 10px 0;
+            background-color: #f4f4f4;
+            border-radius: 4px 4px 0 0;
+        }
+        .day-box {
+            border: 1px solid #ddd;
+            padding: 10px;
+            min-height: 100px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+        .day-date {
+            font-weight: bold;
+            font-size: 1.1em;
+            text-align: right;
+            margin-bottom: 5px;
+        }
+        .day-status {
+            font-size: 0.9em;
+            text-align: center;
+            flex-grow: 1;
+        }
+        /* Стилі стану */
+        .day-working { background-color: #e6ffed; border-color: #28a745; }
+        .day-off { background-color: #f8f8f8; color: #999; }
+        .status-off { color: #dc3545; font-weight: bold; } /* Червоний для вихідного */
+        .status-working { color: #28a745; font-weight: bold; } /* Зелений для робочого */
+        
+        .action-link {
+             font-size: 12px; 
+             text-align: right; 
+             display: block; 
+             margin-top: 5px; 
+             color: #007bff; 
+             text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-card" style="max-width: 900px;">
+        <div class="content">
+            <div class="schedule-header">
+                <h2 th:text="'Розклад роботи: ' + ${master.user.name}"></h2>
+                <p th:text="'Спеціалізація: ' + ${master.specialization}"></p>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                <a th:href="@{/web/admin/masters/{id}/schedule(id=${master.user.userId}, month=${prevMonth})}" 
+                   class="btn-primary" style="background-color: #6c757d; text-decoration: none;">
+                    ← Попередній
+                </a>
+                <h3 th:text="${#temporals.format(currentMonth.atDay(1), 'MMMM yyyy')}" style="margin: 0;"></h3>
+                <a th:href="@{/web/admin/masters/{id}/schedule(id=${master.user.userId}, month=${nextMonth})}" 
+                   class="btn-primary" style="background-color: #6c757d; text-decoration: none;">
+                    Наступний →
+                </a>
+            </div>
+
+            <div class="calendar-grid">
+                <div class="day-header">ПН</div>
+                <div class="day-header">ВТ</div>
+                <div class="day-header">СР</div>
+                <div class="day-header">ЧТ</div>
+                <div class="day-header">ПТ</div>
+                <div class="day-header" style="color: #dc3545;">СБ</div>
+                <div class="day-header" style="color: #dc3545;">НД</div>
+            </div>
+            
+            <div class="calendar-grid">
+                <th:block th:with="firstDayOfMonth=${currentMonth.atDay(1)}">
+                    <div th:each="i : ${#numbers.sequence(1, firstDayOfMonth.getDayOfWeek().getValue() - 1)}"></div>
+                </th:block>
+
+                <div th:each="day : ${monthlySchedule}" 
+                     th:classappend="${day.working ? 'day-working' : 'day-off'}" 
+                     class="day-box">
+                    
+                    <div class="day-date" th:text="${day.date.getDayOfMonth()}">1</div>
+                    
+                    <div class="day-status">
+                        <div th:if="${day.working}" class="status-working">
+                            Працює: <br>
+                            <span th:text="${day.startTime} + ' - ' + ${day.endTime}">09:00 - 18:00</span>
+                            
+                            <a th:href="@{/web/admin/masters/{userId}/schedule/{scheduleId}/edit(userId=${master.user.userId}, scheduleId=${day.scheduleId})}" 
+                               class="action-link">
+                                Редагувати
+                            </a>
+                        </div>
+
+                        <div th:if="${!day.working}" class="status-off">
+                            Вихідний
+                            
+                            <a th:href="@{/web/admin/masters/{userId}/schedule/new/edit(userId=${master.user.userId}, date=${day.date})}" 
+                               class="action-link">
+                                Додати робочий день
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            
+            <a th:href="@{/web/admin/users}" class="btn-primary" style="background-color: #6c757d; text-decoration: none; margin-top: 30px; display: inline-block;">
+                ← Назад до користувачів
+            </a>
+        </div>
+    </div>
+</body>
+</html>

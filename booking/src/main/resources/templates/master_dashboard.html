@@ -2,18 +2,71 @@
 <html lang="uk" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Кабінет Майстра</title>
+    <title th:text="'Кабінет Майстра: ' + ${master.user.name}">Кабінет Майстра</title>
     <link rel="stylesheet" href="/css/beauty-salon.css">
     <style>
-        .master-header { background-color: #6f42c1; color: white; padding: 20px; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        .master-header { background-color: #6f42c1; color: white; padding: 15px; border-radius: 6px; margin-bottom: 20px;}
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
         th { background-color: #f8f9fa; }
+        tr:hover { background-color: #f1f1f1; }
+
+        /* Кольори статусів */
         .status-PENDING { color: orange; font-weight: bold; }
         .status-CONFIRMED { color: blue; font-weight: bold; }
         .status-PAID { color: green; font-weight: bold; }
         .status-COMPLETED { color: gray; }
         .status-CANCELLED { color: red; }
+
+        /* Стилі для календаря */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .day-header {
+            text-align: center;
+            font-weight: bold;
+            padding: 10px 0;
+            background-color: #f4f4f4;
+            border-radius: 4px 4px 0 0;
+        }
+        .day-box {
+            border: 1px solid #ddd;
+            padding: 5px;
+            min-height: 100px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+        }
+        .day-working {
+            background-color: #e6ffed;
+            border-color: #28a745;
+        }
+        .day-off {
+            background-color: #f8f8f8;
+            color: #999;
+        }
+        .day-date {
+            font-weight: bold;
+            font-size: 1.1em;
+            text-align: right;
+            margin-bottom: 5px;
+        }
+        .day-status {
+            font-size: 0.9em;
+            text-align: center;
+            flex-grow: 1;
+        }
+        .status-off {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .status-working {
+            color: #28a745;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -21,17 +74,13 @@
         <div class="content">
             <div class="master-header">
                 <h1>Кабінет Майстра</h1>
-                <p>Вітаємо, <span th:text="${master.user.name}">Master</span>!</p>
-                <p>Спеціалізація: <span th:text="${master.specialization}"></span></p>
+                <p>Вітаємо, <span th:text="${master.user.name}">Master</span>! Спеціалізація: <span th:text="${master.specialization}"></span></p>
             </div>
-
             <div style="margin-top: 30px;">
-                <h3>Ваш розклад та історія записів</h3>
-
+                <h3>Ваші бронювання та історія записів</h3>
                 <div th:if="${#lists.isEmpty(bookings)}">
-                    <p>Записів поки немає.</p>
+                    <p>Наразі у вас немає активних або минулих записів.</p>
                 </div>
-
                 <table th:if="${not #lists.isEmpty(bookings)}">
                     <thead>
                         <tr>
@@ -46,26 +95,55 @@
                     <tbody>
                         <tr th:each="b : ${bookings}">
                             <td th:text="${b.bookingDate} + ' ' + ${b.bookingTime}"></td>
-                            
                             <td th:text="${b.client.name} + ' (' + ${b.client.phone} + ')'"></td>
-                            
                             <td th:text="${b.service.name}"></td>
-                            
                             <td th:text="${b.totalPrice} + ' грн'"></td>
-                            
                             <td th:class="'status-' + ${b.status}" th:text="${b.status}"></td>
-                            
                             <td>
-                                <form th:if="${b.status.name() == 'PAID'}" 
+                                <form th:if="${b.status.name() == 'PAID'}"
                                       th:action="@{/web/bookings/{id}/complete(id=${b.bookingId})}" method="post">
-                                    <button type="submit" class="btn-primary" style="padding: 5px 10px; font-size: 12px;">
-                                        Завершити
+                                    <button type="submit" class="btn-primary" style="background-color: #28a745; padding: 5px 10px; font-size: 12px;">
+                                        Позначити як Виконано
                                     </button>
                                 </form>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <h3 style="margin-top: 50px;">Ваш робочий розклад на <span th:text="${#temporals.format(currentMonth.atDay(1), 'MMMM yyyy')}"></span></h3>
+
+            <div class="calendar-grid" style="max-width: 900px; margin-left: auto; margin-right: auto;">
+                <div class="day-header">ПН</div>
+                <div class="day-header">ВТ</div>
+                <div class="day-header">СР</div>
+                <div class="day-header">ЧТ</div>
+                <div class="day-header">ПТ</div>
+                <div class="day-header" style="color: #dc3545;">СБ</div>
+                <div class="day-header" style="color: #dc3545;">НД</div>
+            </div>
+
+            <div class="calendar-grid" style="max-width: 900px; margin-left: auto; margin-right: auto;">
+                <th:block th:with="firstDayOfMonth=${currentMonth.atDay(1)}">
+                    <div th:each="i : ${#numbers.sequence(1, firstDayOfMonth.getDayOfWeek().getValue() - 1)}"></div>
+                </th:block>
+                <div th:each="day : ${monthlySchedule}"
+                     th:classappend="${day.working ? 'day-working' : 'day-off'}"
+                     class="day-box"
+                     style="cursor: default;">
+                    <div class="day-date" th:text="${day.date.getDayOfMonth()}">1</div>
+
+                    <div class="day-status">
+                        <div th:if="${day.working}" class="status-working">
+                            Працює: <br>
+                            <span th:text="${day.startTime} + ' - ' + ${day.endTime}"></span>
+                        </div>
+                        <div th:if="${!day.working}" class="status-off">
+                            Вихідний
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="footer" style="margin-top: 50px;">

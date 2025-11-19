@@ -57,12 +57,17 @@
                         <td th:text="${m.phone}"></td>
                         <td><span class="role-badge badge-master">MASTER</span></td>
                         <td>
-                            <form th:if="${m.role.name() == 'MASTER' and m.role.name() != 'ADMIN'}"
-                                  th:action="@{/web/admin/users/{id}/change-role(id=${m.userId}, role='CLIENT')}" method="post" onsubmit="return confirm('Ви впевнені, що хочете понизити Майстра ' + [[${m.name}]] + ' до Клієнта?');">
-                                <button type="submit" class="btn-action btn-cancel" style="padding: 5px 10px;">
-                                    Понизити до CLIENT
-                                </button>
-                            </form>
+                            <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                <form th:if="${m.role.name() == 'MASTER' and m.role.name() != 'ADMIN'}"
+                                      th:action="@{/web/admin/users/{id}/change-role(id=${m.userId}, role='CLIENT')}" method="post" onsubmit="return confirm('Ви впевнені, що хочете понизити Майстра ' + [[${m.name}]] + ' до Клієнта?');">
+                                    <button type="submit" class="btn-action btn-cancel" style="padding: 5px 10px; font-size: 12px;">
+                                        Понизити до CLIENT
+                                    </button>
+                                </form>
+                                <a th:href="@{/web/admin/masters/{id}/schedule(id=${m.userId})}" class="btn-action btn-confirm" style="padding: 5px 10px; font-size: 12px;">
+                                    Переглянути розклад
+                                </a>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
@@ -86,12 +91,14 @@
                         <td th:text="${c.phone}"></td>
                         <td><span class="role-badge badge-client">CLIENT</span></td>
                         <td>
-                            <form th:if="${c.role.name() == 'CLIENT' and c.role.name() != 'ADMIN'}"
-                                  th:action="@{/web/admin/users/{id}/change-role(id=${c.userId}, role='MASTER')}" method="post" onsubmit="return confirm('Ви впевнені, що хочете підвищити Клієнта ' + [[${c.name}]] + ' до Майстра?');">
-                                <button type="submit" class="btn-action btn-confirm" style="padding: 5px 10px;">
-                                    Підвищити до MASTER
-                                </button>
-                            </form>
+                            <div style="display: flex; gap: 5px;">
+                                <form th:if="${c.role.name() == 'CLIENT' and c.role.name() != 'ADMIN'}"
+                                      th:action="@{/web/admin/users/{id}/change-role(id=${c.userId}, role='MASTER')}" method="post" onsubmit="return confirm('Ви впевнені, що хочете підвищити Клієнта ' + [[${c.name}]] + ' до Майстра?');">
+                                    <button type="submit" class="btn-action btn-confirm" style="padding: 5px 10px;">
+                                        Підвищити до MASTER
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
