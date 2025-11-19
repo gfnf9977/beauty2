@@ -13,12 +13,25 @@
         .role-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; color: white; }
         .badge-master { background-color: #6f42c1; }
         .badge-client { background-color: #28a745; }
+        .btn-action {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-cancel {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-confirm {
+            background-color: #28a745;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div class="dashboard-card" style="width: 90%; max-width: 1200px;">
         <div class="content">
-            
             <div class="admin-table-header">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h1>Управління користувачами</h1>
@@ -26,10 +39,7 @@
                 </div>
             </div>
 
-            <h2>Список Майстрів</h2>
-            <div th:if="${#lists.isEmpty(masters)}">
-                <p>Майстрів у системі немає.</p>
-            </div>
+            <h2>Список Майстрів (Master)</h2>
             <table th:if="${not #lists.isEmpty(masters)}">
                 <thead>
                     <tr>
@@ -37,7 +47,7 @@
                         <th>Email</th>
                         <th>Телефон</th>
                         <th>Роль</th>
-                        <th>ID</th>
+                        <th>Дія</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -46,15 +56,19 @@
                         <td th:text="${m.email}"></td>
                         <td th:text="${m.phone}"></td>
                         <td><span class="role-badge badge-master">MASTER</span></td>
-                        <td th:text="${m.userId}" style="font-family: monospace; font-size: 12px; color: #888;"></td>
+                        <td>
+                            <form th:if="${m.role.name() == 'MASTER' and m.role.name() != 'ADMIN'}"
+                                  th:action="@{/web/admin/users/{id}/change-role(id=${m.userId}, role='CLIENT')}" method="post" onsubmit="return confirm('Ви впевнені, що хочете понизити Майстра ' + [[${m.name}]] + ' до Клієнта?');">
+                                <button type="submit" class="btn-action btn-cancel" style="padding: 5px 10px;">
+                                    Понизити до CLIENT
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                 </tbody>
             </table>
 
-            <h2>Список Клієнтів</h2>
-            <div th:if="${#lists.isEmpty(clients)}">
-                <p>Клієнтів у системі немає.</p>
-            </div>
+            <h2>Список Клієнтів (Client)</h2>
             <table th:if="${not #lists.isEmpty(clients)}">
                 <thead>
                     <tr>
@@ -62,7 +76,7 @@
                         <th>Email</th>
                         <th>Телефон</th>
                         <th>Роль</th>
-                        <th>ID</th>
+                        <th>Дія</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -71,11 +85,17 @@
                         <td th:text="${c.email}"></td>
                         <td th:text="${c.phone}"></td>
                         <td><span class="role-badge badge-client">CLIENT</span></td>
-                        <td th:text="${c.userId}" style="font-family: monospace; font-size: 12px; color: #888;"></td>
+                        <td>
+                            <form th:if="${c.role.name() == 'CLIENT' and c.role.name() != 'ADMIN'}"
+                                  th:action="@{/web/admin/users/{id}/change-role(id=${c.userId}, role='MASTER')}" method="post" onsubmit="return confirm('Ви впевнені, що хочете підвищити Клієнта ' + [[${c.name}]] + ' до Майстра?');">
+                                <button type="submit" class="btn-action btn-confirm" style="padding: 5px 10px;">
+                                    Підвищити до MASTER
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                 </tbody>
             </table>
-
         </div>
     </div>
 </body>

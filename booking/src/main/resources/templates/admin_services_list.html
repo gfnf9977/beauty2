@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="uk" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Послуги | Адмін</title>
+    <link rel="stylesheet" href="/css/beauty-salon.css">
+    <style>
+        .admin-table-header {
+            background-color: #343a40;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        .btn-action {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-pay {
+            background-color: #ffc107;
+            color: white;
+        }
+        .btn-cancel {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-card" style="width: 80%; max-width: 1000px;">
+        <div class="content">
+            <div class="admin-table-header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1>Управління послугами</h1>
+                    <div>
+                        <a href="/web/admin/services/new" class="btn-primary" style="text-decoration: none; margin-right: 15px;">
+                            + Додати нову послугу
+                        </a>
+                        <a href="/auth/admin/dashboard" class="btn-primary" style="background-color: #6c757d; text-decoration: none;">
+                            ← Назад
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <p>Усього послуг у системі: <span th:text="${#lists.size(services)}">0</span></p>
+            <div th:if="${#lists.isEmpty(services)}">
+                <p style="text-align: center; padding: 20px;">Послуг у системі поки немає.</p>
+            </div>
+            <table th:if="${not #lists.isEmpty(services)}">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Назва</th>
+                        <th>Опис</th>
+                        <th>Тривалість</th>
+                        <th>Ціна</th>
+                        <th>Майстер (за замовчуванням)</th>
+                        <th>Дія</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="s : ${services}">
+                        <td th:text="${#strings.substring(s.serviceId, 0, 8)} + '...'" style="font-family: monospace; color: #888;"></td>
+                        <td th:text="${s.name}" style="font-weight: bold;"></td>
+                        <td th:text="${s.description}"></td>
+                        <td th:text="${s.durationMinutes} + ' хв'"></td>
+                        <td th:text="${s.price} + ' грн'"></td>
+                        <td>
+                            <span th:if="${s.master != null}" th:text="${s.master.user.name} + ' (' + ${s.master.specialization} + ')'"></span>
+                            <span th:if="${s.master == null}">Не прив'язано</span>
+                        </td>
+                        <td>
+                           <a th:href="@{/web/admin/services/edit/{id}(id=${s.serviceId})}" class="btn-action btn-pay" style="padding: 5px 10px; margin-right: 5px;">Редагувати</a>
+
+                           <form th:action="@{/web/admin/services/delete/{id}(id=${s.serviceId})}" method="post" onsubmit="return confirm('Ви впевнені, що хочете видалити послугу ' + '«' + [[${s.name}]] + '»?');" style="display: inline-block;">
+                               <button type="submit" class="btn-action btn-cancel" style="padding: 5px 10px;">Видалити</button>
+                           </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

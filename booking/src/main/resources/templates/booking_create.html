@@ -8,38 +8,94 @@
 <body>
     <div class="auth-card" style="max-width: 600px;">
         <h1>Записатися на послугу</h1>
-        
-        <div class="error" th:if="${error}" th:text="${error}" style="color: red; margin-bottom: 15px;"></div>
 
+        <div class="error" th:if="${error}" th:text="${error}" style="color: red; margin-bottom: 15px;"></div>
         <form th:action="@{/web/bookings/create}" method="post">
-            
+
             <div class="form-group">
                 <label>Оберіть послугу:</label>
-                <select name="serviceId" required>
-                    <option th:each="s : ${services}" 
-                            th:value="${s.serviceId}" 
-                            th:text="${s.name} + ' (' + ${s.price} + ' грн)'"></option>
+                <select name="serviceName" id="serviceNameSelect" required>
+                    <option value="">-- Оберіть послугу --</option>
+                    <option th:each="name : ${uniqueServiceNames}"
+                            th:value="${name}"
+                            th:text="${name}"></option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label>Оберіть майстра:</label>
-                <select name="masterId" required>
-                    <option th:each="m : ${masters}" 
-                            th:value="${m.masterId}" 
-                            th:text="${m.specialization} + ' - Досвід: ' + ${m.experience} + ' років'"></option>
+                <label>Доступні майстри:</label>
+                <select name="masterId" id="masterSelect" required>
+                    <option value="">-- Оберіть послугу спочатку --</option>
                 </select>
             </div>
 
             <div class="form-group">
                 <label>Дата та час:</label>
-                <input type="datetime-local" name="dateTime" required 
+                <input type="datetime-local" name="dateTime" required
                        th:value="${#temporals.format(#temporals.createNow().plusDays(1), 'yyyy-MM-dd''T''10:00')}">
             </div>
-
+            
             <button type="submit" class="btn-primary">Забронювати</button>
             <a href="/auth/home" class="links">Назад</a>
         </form>
     </div>
+
+    <script>
+        const serviceNameSelect = document.getElementById('serviceNameSelect');
+        const masterSelect = document.getElementById('masterSelect');
+        
+        // serviceIdHiddenInput більше не потрібен
+
+        function updateMastersByServiceName() {
+            const selectedServiceName = serviceNameSelect.value;
+
+            masterSelect.innerHTML = '<option value="">-- Оберіть майстра --</option>';
+            // serviceIdHiddenInput.value = ''; // Видалено
+
+            if (!selectedServiceName) {
+                return;
+            }
+
+            // 1. AJAX-ЗАПИТ: URL тепер містить закодовану назву послуги
+            fetch('/web/bookings/masters/by-service-name/' + encodeURIComponent(selectedServiceName))
+                .then(response => {
+                    if (!response.ok) { 
+                        throw new Error('Помилка сервера'); 
+                    }
+                    return response.json();
+                })
+                .then(masters => {
+                    if (masters.length > 0) {
+                        masters.forEach(master => {
+                            const option = document.createElement('option');
+                            
+                            // МИ ПОВИННІ ВИКОРИСТОВУВАТИ ТІЛЬКИ masterId. Controller зробить решту.
+                            option.value = master.masterId; 
+                            option.textContent = master.user.name + ' (' + master.specialization + ')';
+                            masterSelect.appendChild(option);
+                        });
+
+                        // Автоматично обираємо єдиного доступного майстра (якщо такий є)
+                        if (masterSelect.options.length === 2) { // 1 - це дефолтна опція
+                            masterSelect.options[1].selected = true;
+                        }
+                    } else {
+                        const option = document.createElement('option');
+                        option.textContent = 'Немає доступних майстрів';
+                        masterSelect.appendChild(option);
+                    }
+                })
+                .catch(error => {
+                    console.error('Помилка фільтрації майстрів:', error);
+                    masterSelect.innerHTML = '<option value="">Помилка завантаження</option>';
+                });
+        }
+
+        serviceNameSelect.addEventListener('change', updateMastersByServiceName);
+
+        if (serviceNameSelect.value) {
+            updateMastersByServiceName();
+        }
+    </script>
 </body>
 </html>
