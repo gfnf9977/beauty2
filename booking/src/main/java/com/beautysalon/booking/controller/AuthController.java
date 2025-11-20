@@ -52,6 +52,11 @@ public class AuthController {
         User user = userService.login(email, password);
 
         if (user != null) {
+            if (user.getRole() == Role.BANNED) {
+                model.addAttribute("error", "Ваш акаунт заблоковано адміністрацією. Зверніться до підтримки.");
+                return "auth_login";
+            }
+
             session.setAttribute("loggedInUser", user);
 
             if (user.getRole() == Role.ADMIN) {

@@ -14,6 +14,7 @@ import java.util.UUID;
 
 @Service
 public class UserService {
+
     private final IUserRepository userRepository;
     private final IMasterRepository masterRepository;
 
@@ -71,17 +72,19 @@ public class UserService {
              return user;
         }
 
-        if (currentRole == Role.MASTER && newRole == Role.CLIENT) {
+        if (currentRole == Role.MASTER && newRole != Role.MASTER) {
             masterRepository.findByUserUserId(userId).ifPresent(masterRepository::delete);
-            user.setRole(Role.CLIENT);
         }
-        else if (currentRole == Role.CLIENT && newRole == Role.MASTER) {
+
+        if (newRole == Role.MASTER && currentRole != Role.MASTER) {
             if (masterRepository.findByUserUserId(userId).isEmpty()) {
-                Master newMaster = new Master(user, "Призначити спеціалізацію", 0);
+                Master newMaster =
+                    new Master(user, "Призначити спеціалізацію", 0);
                 masterRepository.save(newMaster);
             }
-            user.setRole(Role.MASTER);
         }
+
+        user.setRole(newRole);
 
         return userRepository.save(user);
     }

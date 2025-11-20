@@ -1,5 +1,6 @@
 package com.beautysalon.booking.controller;
 
+import com.beautysalon.booking.dto.MasterOptionDto;
 import com.beautysalon.booking.entity.Booking;
 import com.beautysalon.booking.entity.User;
 import com.beautysalon.booking.entity.Master;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 @Controller
 @RequestMapping("/web/bookings")
 public class BookingWebController {
+
     private final BookingService bookingService;
     private final PaymentFacade paymentFacade;
     private final IServiceRepository serviceRepository;
@@ -176,15 +178,22 @@ public class BookingWebController {
 
     @GetMapping("/masters/by-service-name/{serviceName}")
     @ResponseBody
-    public ResponseEntity<List<Master>> getMastersByServiceName(@PathVariable String serviceName) {
+    public ResponseEntity<List<MasterOptionDto>> getMastersByServiceName(@PathVariable String serviceName) {
         List<com.beautysalon.booking.entity.Service> services = serviceRepository.findByName(serviceName);
+
         if (services.isEmpty()) {
             return new ResponseEntity<>(List.of(), HttpStatus.OK);
         }
-        List<Master> availableMasters = services.stream()
+
+        List<MasterOptionDto> availableMasters = services.stream()
             .map(com.beautysalon.booking.entity.Service::getMaster)
             .filter(master -> master != null)
             .distinct()
+            .map(master -> new MasterOptionDto(
+                master.getMasterId(),
+                master.getUser().getName(),
+                master.getSpecialization()
+            ))
             .collect(Collectors.toList());
         return new ResponseEntity<>(availableMasters, HttpStatus.OK);
     }

@@ -5,24 +5,19 @@
     <title>Адмін Панель</title>
     <link rel="stylesheet" href="/css/beauty-salon.css">
     <style>
-        .admin-header {
-            background-color: #343a40;
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-        }
-        .btn-primary {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
+        .admin-header { background-color: #343a40; color: white; padding: 20px; border-radius: 8px; }
+        .admin-menu-btn {
             display: inline-block;
+            text-decoration: none;
             text-align: center;
-            min-width: 200px;
+            width: 250px;
+            margin: 10px;
+            padding: 15px;
+            font-size: 16px;
+            border-radius: 5px;
+            transition: transform 0.2s;
         }
+        .admin-menu-btn:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body>
@@ -32,27 +27,29 @@
                 <h1>Панель Адміністратора</h1>
                 <p>Вітаємо, <span th:text="${admin.name}">Admin</span>!</p>
             </div>
-            <div style="margin-top: 30px;">
+
+            <div style="margin-top: 30px; text-align: center;">
                 <h3>Керування салоном</h3>
-                <p>Тут буде функціонал для управління майстрами, послугами та розкладом.</p>
-                <ul style="list-style: none; padding: 0; margin: 0;">
-                    <li style="margin-bottom: 10px;">
-                        <a href="/web/admin/users" class="btn-primary">
-                            Управління користувачами
-                        </a>
-                    </li>
-                    <li style="margin-bottom: 10px;">
-                        <a href="/web/admin/services" class="btn-primary">
-                            Управління послугами
-                        </a>
-                    </li>
-                    <li style="margin-bottom: 10px;">
-                        <a href="/web/admin/bookings" class="btn-primary">
-                            Перегляд всіх бронювань
-                        </a>
-                    </li>
-                </ul>
+                <p style="color: #666; margin-bottom: 20px;">Оберіть розділ для роботи:</p>
+                
+                <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+                    <!-- Посилання на розділ КОРИСТУВАЧІВ -->
+                    <a href="/web/admin/users" class="btn-primary admin-menu-btn" style="background-color: #6f42c1;">
+                        👥 Управління користувачами
+                    </a>
+
+                    <!-- Посилання на розділ ПОСЛУГ -->
+                    <a href="/web/admin/services" class="btn-primary admin-menu-btn" style="background-color: #28a745;">
+                        ✂️ Управління послугами
+                    </a>
+
+                    <!-- Посилання на розділ БРОНЮВАНЬ -->
+                    <a href="/web/admin/bookings" class="btn-primary admin-menu-btn" style="background-color: #007bff;">
+                        📅 Перегляд всіх бронювань
+                    </a>
+                </div>
             </div>
+
             <div class="footer" style="margin-top: 50px;">
                 <a href="/auth/logout">Вийти</a>
             </div>

@@ -67,7 +67,6 @@
                 </div>
                 <input type="hidden" name="bookingTime" id="bookingTimeHidden" required />
             </div>
-
             <div class="form-group" style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 20px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <input type="checkbox" id="allInclusive" name="allInclusive" value="true" style="width: 20px; height: 20px; cursor: pointer;">
@@ -81,7 +80,6 @@
                     <li>☕ Напої (Кава / Чай / Ігристе)</li>
                 </ul>
             </div>
-
             <button type="submit" class="btn-primary" style="margin-top: 20px;">Забронювати</button>
             <a href="/auth/home" class="links">Назад</a>
         </form>
@@ -115,11 +113,9 @@
             masterSelect.innerHTML = '<option value="">-- Оберіть майстра --</option>';
             timeSlotsContainer.innerHTML = '<span style="color: #999;">-- Оберіть майстра та дату --</span>';
             bookingTimeHidden.value = '';
-
             if (!selectedServiceName) {
                 return;
             }
-
             fetch('/web/bookings/masters/by-service-name/' + encodeURIComponent(selectedServiceName))
                 .then(response => response.json())
                 .then(masters => {
@@ -127,7 +123,7 @@
                         masters.forEach(master => {
                             const option = document.createElement('option');
                             option.value = master.masterId;
-                            option.textContent = master.user.name + ' (' + master.specialization + ')';
+                            option.textContent = master.fullName + ' (' + master.specialization + ')';
                             masterSelect.appendChild(option);
                         });
                         if (masterSelect.options.length === 2) {
@@ -138,7 +134,6 @@
                         option.textContent = 'Немає доступних майстрів';
                         masterSelect.appendChild(option);
                     }
-
                     const masterId = masterSelect.value;
                     if (masterId) {
                         fetchWorkingDates(masterId);
@@ -157,22 +152,18 @@
             const date = bookingDateSelect.value;
             timeSlotsContainer.innerHTML = '<span style="color: #999;">-- Оновлення слотів --</span>';
             bookingTimeHidden.value = '';
-
             if (!masterId || !date) {
                 timeSlotsContainer.innerHTML = '<span style="color: #999;">-- Оберіть майстра та дату --</span>';
                 return;
             }
-
             if (masterWorkingDates.length > 0 && !masterWorkingDates.includes(date)) {
                 timeSlotsContainer.innerHTML = '<span style="color: red; font-weight: bold;">⛔ Майстер не працює ' + date + '!</span>';
                 return;
             }
-
             if (masterWorkingDates.length === 0) {
                 timeSlotsContainer.innerHTML = '<span style="color: orange;">⚠ Завантаження розкладу...</span>';
                 return;
             }
-
             fetch(`/web/bookings/slots/available?masterId=${masterId}&date=${date}`)
                 .then(response => response.json())
                 .then(availableSlots => {
@@ -181,7 +172,6 @@
                         const hour = 8 + i;
                         return (hour < 10 ? '0' : '') + hour + ':00';
                     });
-
                     if (allSlots.length > 0) {
                         allSlots.forEach(slot => {
                             const isAvailable = availableSlots.includes(slot);
@@ -190,7 +180,6 @@
                             slotElement.textContent = slot;
                             slotElement.className = 'slot-btn ' + (isAvailable ? 'available' : 'occupied');
                             slotElement.disabled = !isAvailable;
-
                             if (isAvailable) {
                                 slotElement.addEventListener('click', function() {
                                     document.querySelectorAll('.slot-btn.available').forEach(btn => {
