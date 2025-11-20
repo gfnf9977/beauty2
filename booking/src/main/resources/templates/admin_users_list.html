@@ -61,7 +61,7 @@
                                 <form th:if="${m.role.name() == 'MASTER' and m.role.name() != 'ADMIN'}"
                                       th:action="@{/web/admin/users/{id}/change-role(id=${m.userId}, role='CLIENT')}" method="post" onsubmit="return confirm('Ви впевнені, що хочете понизити Майстра ' + [[${m.name}]] + ' до Клієнта?');">
                                     <button type="submit" class="btn-action btn-cancel" style="padding: 5px 10px; font-size: 12px;">
-                                        Понизити до CLIENT
+                                        Звільнити
                                     </button>
                                 </form>
                                 <a th:href="@{/web/admin/masters/{id}/schedule(id=${m.userId})}" class="btn-action btn-confirm" style="padding: 5px 10px; font-size: 12px;">
@@ -95,7 +95,7 @@
                                 <form th:if="${c.role.name() == 'CLIENT' and c.role.name() != 'ADMIN'}"
                                       th:action="@{/web/admin/users/{id}/change-role(id=${c.userId}, role='MASTER')}" method="post" onsubmit="return confirm('Ви впевнені, що хочете підвищити Клієнта ' + [[${c.name}]] + ' до Майстра?');">
                                     <button type="submit" class="btn-action btn-confirm" style="padding: 5px 10px;">
-                                        Підвищити до MASTER
+                                        Узяти на роботу
                                     </button>
                                 </form>
                             </div>
