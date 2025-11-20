@@ -14,6 +14,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -178,7 +179,9 @@ public class BookingWebController {
 
     @GetMapping("/masters/by-service-name/{serviceName}")
     @ResponseBody
+    @Transactional
     public ResponseEntity<List<MasterOptionDto>> getMastersByServiceName(@PathVariable String serviceName) {
+
         List<com.beautysalon.booking.entity.Service> services = serviceRepository.findByName(serviceName);
 
         if (services.isEmpty()) {
@@ -192,7 +195,8 @@ public class BookingWebController {
             .map(master -> new MasterOptionDto(
                 master.getMasterId(),
                 master.getUser().getName(),
-                master.getSpecialization()
+                master.getSpecialization(),
+                master.getFormattedRating()
             ))
             .collect(Collectors.toList());
         return new ResponseEntity<>(availableMasters, HttpStatus.OK);
