@@ -3,12 +3,11 @@ package com.beautysalon.booking.controller;
 import com.beautysalon.booking.entity.Booking;
 import com.beautysalon.booking.entity.User;
 import com.beautysalon.booking.entity.Master;
-import com.beautysalon.booking.entity.Schedule;
 import com.beautysalon.booking.repository.IMasterRepository;
-import com.beautysalon.booking.repository.IScheduleRepository;
 import com.beautysalon.booking.repository.IServiceRepository;
 import com.beautysalon.booking.service.BookingService;
 import com.beautysalon.booking.service.PaymentFacade;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -31,19 +30,16 @@ public class BookingWebController {
     private final PaymentFacade paymentFacade;
     private final IServiceRepository serviceRepository;
     private final IMasterRepository masterRepository;
-    private final IScheduleRepository scheduleRepository;
 
     public BookingWebController(
             BookingService bookingService,
             PaymentFacade paymentFacade,
             IServiceRepository serviceRepository,
-            IMasterRepository masterRepository,
-            IScheduleRepository scheduleRepository) {
+            IMasterRepository masterRepository) {
         this.bookingService = bookingService;
         this.paymentFacade = paymentFacade;
         this.serviceRepository = serviceRepository;
         this.masterRepository = masterRepository;
-        this.scheduleRepository = scheduleRepository;
     }
 
     @GetMapping("/new")
@@ -94,28 +90,35 @@ public class BookingWebController {
     }
 
     @PostMapping("/{id}/confirm")
-    public String confirmBooking(@PathVariable UUID id) {
+    public String confirmBooking(@PathVariable UUID id, HttpServletRequest request) {
         bookingService.confirmBooking(id);
-        return "redirect:/auth/home";
+        String referer = request.getHeader("Referer");
+        return "redirect:" + (referer != null ? referer : "/auth/home");
     }
 
     @PostMapping("/{id}/pay")
     public String payBooking(
             @PathVariable UUID id,
-            @RequestParam(defaultValue = "LiqPay") String paymentMethod,
-            @RequestParam String cardNumber) {
+            @RequestParam(defaultValue = "CARD") String paymentMethod,
+            @RequestParam String cardNumber,
+            HttpServletRequest request) {
+
         paymentFacade.payForBooking(id, paymentMethod, cardNumber);
-        return "redirect:/auth/home";
+
+        String referer = request.getHeader("Referer");
+        return "redirect:" + (referer != null ? referer : "/auth/home");
     }
 
     @PostMapping("/{id}/complete")
-    public String completeBooking(@PathVariable UUID id) {
+    public String completeBooking(@PathVariable UUID id, HttpServletRequest request) {
         bookingService.completeBooking(id);
-        return "redirect:/auth/home";
+
+        String referer = request.getHeader("Referer");
+        return "redirect:" + (referer != null ? referer : "/auth/home");
     }
 
     @PostMapping("/{id}/cancel")
-    public String cancelBooking(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+    public String cancelBooking(@PathVariable UUID id, RedirectAttributes redirectAttributes, HttpServletRequest request) {
         try {
             Booking cancelledBooking = bookingService.cancelBooking(id);
 
@@ -129,7 +132,8 @@ public class BookingWebController {
             redirectAttributes.addFlashAttribute("error", "Помилка скасування: " + e.getMessage());
         }
 
-        return "redirect:/auth/home";
+        String referer = request.getHeader("Referer");
+        return "redirect:" + (referer != null ? referer : "/auth/home");
     }
 
     @GetMapping("/{id}/receipt")
@@ -196,42 +200,5 @@ public class BookingWebController {
     public ResponseEntity<List<LocalDate>> getMasterWorkingDates(@PathVariable UUID masterId) {
         List<LocalDate> workingDates = bookingService.getMasterWorkingDates(masterId);
         return new ResponseEntity<>(workingDates, HttpStatus.OK);
-    }
-
-    @GetMapping("/masters/{masterId}/slots/schedule-details")
-    @ResponseBody
-    public ResponseEntity<List<Map<String, Object>>> getDetailedSlotsForMaster(
-            @PathVariable UUID masterId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        List<Schedule> masterSchedules = scheduleRepository.findByMasterMasterIdAndWorkDate(masterId, date);
-        List<Map<String, Object>> slotDetails = new ArrayList<>();
-        if (masterSchedules.isEmpty()) {
-            return new ResponseEntity<>(List.of(), HttpStatus.OK);
-        }
-        Schedule schedule = masterSchedules.get(0);
-        LocalTime workStart = schedule.getStartTime();
-        LocalTime workEnd = schedule.getEndTime();
-        Set<LocalTime> occupiedSlots = bookingService.getOccupiedSlots(masterId, date);
-        for (int hour = 8; hour < 20; hour++) {
-            LocalTime slotTime = LocalTime.of(hour, 0);
-            boolean isWorkingBoundary = !slotTime.isBefore(workStart) && slotTime.plusHours(1).isBefore(workEnd.plusNanos(1));
-            Map<String, Object> detail = new HashMap<>();
-            detail.put("time", slotTime.toString());
-            detail.put("isWorkingBoundary", isWorkingBoundary);
-            if (!isWorkingBoundary) {
-                detail.put("status", "OUT_OF_HOURS");
-            } else if (occupiedSlots.contains(slotTime)) {
-                Optional<Booking> bookingOpt = bookingService.getBookingByMasterAndDateTime(masterId, date, slotTime);
-                detail.put("status", "BOOKED");
-                detail.put("clientName", bookingOpt.map(b -> b.getClient().getName()).orElse("N/A"));
-                detail.put("clientPhone", bookingOpt.map(b -> b.getClient().getPhone()).orElse("N/A"));
-                detail.put("serviceName", bookingOpt.map(b -> b.getService().getName()).orElse("N/A"));
-                detail.put("price", bookingOpt.map(b -> b.getTotalPrice()).orElse(0.0));
-            } else {
-                detail.put("status", "AVAILABLE");
-            }
-            slotDetails.add(detail);
-        }
-        return new ResponseEntity<>(slotDetails, HttpStatus.OK);
     }
 }
