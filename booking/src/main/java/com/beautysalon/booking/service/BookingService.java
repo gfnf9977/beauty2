@@ -106,19 +106,28 @@ public class BookingService {
         return scheduleRepository.findDistinctWorkDatesByMasterId(masterId);
     }
 
-    public Booking createBooking(UUID clientId, UUID serviceId, UUID masterId, LocalDateTime desiredDateTime) {
+    public Booking createBooking(UUID clientId, UUID serviceId, UUID masterId, LocalDateTime desiredDateTime, boolean allInclusive) {
         BookingValidationContext context = new BookingValidationContext(clientId, masterId, serviceId, desiredDateTime);
         validationChain.handle(context);
         if (context.hasError()) {
             throw new RuntimeException(context.getErrorMessage());
         }
 
-        BookableItem service1 = context.getService();
-        ServicePackage spaPackage = new ServicePackage("SPA-пакет 'Релакс'");
-        spaPackage.addItem(service1);
-        com.beautysalon.booking.entity.Service service2 =
-                new com.beautysalon.booking.entity.Service("Миття голови", "", 150, 15);
-        spaPackage.addItem(service2);
+        BookableItem finalItem;
+        BookableItem baseService = context.getService();
+
+        if (allInclusive) {
+            ServicePackage vipPackage = new ServicePackage("VIP-пакет: " + baseService.getName());
+            vipPackage.addItem(baseService);
+
+            com.beautysalon.booking.entity.Service addons =
+                new com.beautysalon.booking.entity.Service("VIP-додатки (Косметика, Масаж, Напої)", "All Inclusive", 200, 15);
+
+            vipPackage.addItem(addons);
+            finalItem = vipPackage;
+        } else {
+            finalItem = baseService;
+        }
 
         Booking newBooking = new Booking();
         newBooking.setClient(context.getClient());
@@ -126,7 +135,7 @@ public class BookingService {
         newBooking.setService(context.getService());
         newBooking.setBookingDate(context.getDateTime().toLocalDate());
         newBooking.setBookingTime(context.getDateTime().toLocalTime());
-        newBooking.setTotalPrice(spaPackage.getPrice());
+        newBooking.setTotalPrice(finalItem.getPrice());
         newBooking.setStatus(BookingStatus.PENDING);
 
         Booking savedBooking = bookingRepository.save(newBooking);
@@ -195,5 +204,5 @@ public class BookingService {
 
     public Optional<Booking> findBookingById(UUID id) {
         return bookingRepository.findById(id);
-    }    
+    }
 }

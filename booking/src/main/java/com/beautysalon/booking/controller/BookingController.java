@@ -30,11 +30,12 @@ public class BookingController {
             @RequestParam UUID clientId,
             @RequestParam UUID serviceId,
             @RequestParam UUID masterId,
-            @RequestParam String dateTime) {
+            @RequestParam String dateTime,
+            @RequestParam(required = false, defaultValue = "false") boolean allInclusive) {
         try {
             LocalDateTime desiredDateTime = LocalDateTime.parse(dateTime);
             Booking newBooking = bookingService.createBooking(
-                    clientId, serviceId, masterId, desiredDateTime);
+                    clientId, serviceId, masterId, desiredDateTime, allInclusive);
             return new ResponseEntity<>(newBooking, HttpStatus.CREATED);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
@@ -58,9 +59,12 @@ public class BookingController {
     }
 
     @PostMapping("/{bookingId}/pay")
-    public ResponseEntity<?> payBooking(@PathVariable UUID bookingId, @RequestParam String cardNumber) {
+    public ResponseEntity<?> payBooking(
+            @PathVariable UUID bookingId,
+            @RequestParam(defaultValue = "CARD") String paymentMethod,
+            @RequestParam(defaultValue = "0000") String cardNumber) {
         try {
-            Booking booking = paymentFacade.payForBooking(bookingId, "LiqPay", cardNumber);
+            Booking booking = paymentFacade.payForBooking(bookingId, paymentMethod, cardNumber);
             return new ResponseEntity<>(booking, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
@@ -91,14 +95,11 @@ public class BookingController {
     public ResponseEntity<String> cancelBookingWithRefund(@PathVariable UUID bookingId) {
         try {
             Booking cancelledBooking = bookingService.cancelBooking(bookingId);
-
             if (cancelledBooking.getStatus() == BookingStatus.CANCELLED) {
                 String refundMessage = paymentFacade.refundBooking(bookingId);
                 return new ResponseEntity<>(refundMessage, HttpStatus.OK);
             }
-
             return new ResponseEntity<>("Бронювання скасовано, оплати не було.", HttpStatus.OK);
-
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }

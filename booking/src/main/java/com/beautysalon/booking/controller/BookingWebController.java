@@ -62,6 +62,7 @@ public class BookingWebController {
             @RequestParam UUID masterId,
             @RequestParam String bookingDate,
             @RequestParam String bookingTime,
+            @RequestParam(required = false) boolean allInclusive,
             HttpSession session,
             Model model) {
         User user = (User) session.getAttribute("loggedInUser");
@@ -76,7 +77,7 @@ public class BookingWebController {
             .orElseThrow(() -> new RuntimeException("Не вдалося знайти конкретну послугу, прив'язану до обраного майстра."));
 
         try {
-            bookingService.createBooking(user.getUserId(), finalServiceId, masterId, finalDateTime);
+            bookingService.createBooking(user.getUserId(), finalServiceId, masterId, finalDateTime, allInclusive);
             return "redirect:/auth/home";
         } catch (Exception e) {
             model.addAttribute("error", "Помилка створення: " + e.getMessage());
@@ -102,9 +103,7 @@ public class BookingWebController {
             @RequestParam(defaultValue = "CARD") String paymentMethod,
             @RequestParam String cardNumber,
             HttpServletRequest request) {
-
         paymentFacade.payForBooking(id, paymentMethod, cardNumber);
-
         String referer = request.getHeader("Referer");
         return "redirect:" + (referer != null ? referer : "/auth/home");
     }
@@ -112,7 +111,6 @@ public class BookingWebController {
     @PostMapping("/{id}/complete")
     public String completeBooking(@PathVariable UUID id, HttpServletRequest request) {
         bookingService.completeBooking(id);
-
         String referer = request.getHeader("Referer");
         return "redirect:" + (referer != null ? referer : "/auth/home");
     }
@@ -121,7 +119,6 @@ public class BookingWebController {
     public String cancelBooking(@PathVariable UUID id, RedirectAttributes redirectAttributes, HttpServletRequest request) {
         try {
             Booking cancelledBooking = bookingService.cancelBooking(id);
-
             if (cancelledBooking.getPayment() != null && "PAID".equals(cancelledBooking.getPayment().getPaymentStatus())) {
                 String refundMessage = paymentFacade.refundBooking(id);
                 redirectAttributes.addFlashAttribute("success", "Бронювання скасовано. " + refundMessage);

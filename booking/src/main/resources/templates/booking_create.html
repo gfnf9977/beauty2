@@ -67,11 +67,25 @@
                 </div>
                 <input type="hidden" name="bookingTime" id="bookingTimeHidden" required />
             </div>
-            <button type="submit" class="btn-primary">Забронювати</button>
+
+            <div class="form-group" style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 20px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="allInclusive" name="allInclusive" value="true" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="allInclusive" style="margin: 0; font-size: 16px; font-weight: bold; cursor: pointer; color: #856404;">
+                        Додати VIP-пакет "All Inclusive" (+200 грн)
+                    </label>
+                </div>
+                <ul style="margin: 10px 0 0 20px; color: #666; font-size: 13px;">
+                    <li>✨ Преміальна косметика (Lux-бренд)</li>
+                    <li>💆‍♂️ Релакс-масаж (голови або рук)</li>
+                    <li>☕ Напої (Кава / Чай / Ігристе)</li>
+                </ul>
+            </div>
+
+            <button type="submit" class="btn-primary" style="margin-top: 20px;">Забронювати</button>
             <a href="/auth/home" class="links">Назад</a>
         </form>
     </div>
-
     <script>
         const serviceNameSelect = document.getElementById('serviceNameSelect');
         const masterSelect = document.getElementById('masterSelect');
@@ -82,12 +96,10 @@
 
         function fetchWorkingDates(masterId) {
             masterWorkingDates = [];
-
             fetch(`/web/bookings/dates/working/${masterId}`)
                 .then(response => response.json())
                 .then(dates => {
                     masterWorkingDates = dates.map(d => d.toString());
-
                     if (bookingDateSelect.value) {
                         updateAvailableSlots();
                     }
@@ -118,7 +130,6 @@
                             option.textContent = master.user.name + ' (' + master.specialization + ')';
                             masterSelect.appendChild(option);
                         });
-
                         if (masterSelect.options.length === 2) {
                             masterSelect.options[1].selected = true;
                         }
@@ -166,7 +177,6 @@
                 .then(response => response.json())
                 .then(availableSlots => {
                     timeSlotsContainer.innerHTML = '';
-
                     const allSlots = Array.from({length: 12}, (_, i) => {
                         const hour = 8 + i;
                         return (hour < 10 ? '0' : '') + hour + ':00';
@@ -175,7 +185,6 @@
                     if (allSlots.length > 0) {
                         allSlots.forEach(slot => {
                             const isAvailable = availableSlots.includes(slot);
-
                             const slotElement = document.createElement('button');
                             slotElement.type = 'button';
                             slotElement.textContent = slot;
