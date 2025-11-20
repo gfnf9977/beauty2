@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="uk" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beauty Salon | Головна</title>
+    <link rel="stylesheet" href="/css/beauty-salon.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f9f9f9;
+            display: block !important;
+            height: auto !important;
+            justify-content: unset !important;
+            align-items: unset !important;
+        }
+
+        .navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 50px; background-color: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: sticky; top: 0; z-index: 1000;
+        }
+        .logo { font-size: 24px; font-weight: bold; color: #6f42c1; text-decoration: none; }
+        .nav-links a {
+            text-decoration: none; color: #333; margin-left: 20px; font-weight: 500;
+            padding: 8px 15px; border-radius: 20px; transition: 0.3s;
+        }
+        .nav-links a:hover { color: #6f42c1; background-color: #f0f0f0; }
+        .nav-links a.btn-login { border: 1px solid #6f42c1; color: #6f42c1; }
+        .nav-links a.btn-register { background-color: #6f42c1; color: white; }
+        .nav-links a.btn-register:hover { background-color: #5a32a3; color: white; }
+
+        .hero {
+            background: linear-gradient(135deg, #6f42c1, #a66cff);
+            height: 450px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; text-align: center; padding: 0 20px;
+        }
+        .hero h1 { font-size: 48px; margin-bottom: 10px; letter-spacing: 1px; }
+        .hero p { font-size: 20px; margin-bottom: 30px; opacity: 0.9; max-width: 600px; }
+        .hero-btn {
+            padding: 15px 40px; background-color: white; color: #6f42c1;
+            text-decoration: none; font-size: 18px; border-radius: 30px; font-weight: bold;
+            transition: all 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .hero-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 60px 20px; }
+        .section-title { text-align: center; font-size: 32px; margin-bottom: 40px; color: #333; position: relative; }
+        .section-title::after {
+            content: ''; display: block; width: 60px; height: 3px; background-color: #6f42c1;
+            margin: 10px auto 0;
+        }
+
+        .grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .service-card {
+            background: white; border-radius: 12px; padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05); transition: 0.3s;
+            border-top: 4px solid #6f42c1;
+            display: flex; flex-direction: column; height: 100%;
+        }
+        .service-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .service-title { font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #333; }
+        .service-desc { color: #666; font-size: 15px; line-height: 1.6; flex-grow: 1; margin-bottom: 20px; }
+        .service-meta {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-top: 15px; border-top: 1px solid #eee;
+        }
+        .price-tag { font-size: 20px; font-weight: bold; color: #6f42c1; }
+        .duration { font-size: 14px; color: #888; display: flex; align-items: center; gap: 5px; }
+
+        .master-card {
+            background: white; border-radius: 12px; padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05); transition: 0.3s;
+            text-align: center; position: relative; overflow: hidden;
+        }
+        .master-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+
+        .master-avatar {
+            width: 100px; height: 100px; border-radius: 50%;
+            background-color: #f0f0f0; color: #6f42c1;
+            font-size: 36px; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px; border: 3px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .master-name { font-size: 20px; font-weight: bold; color: #333; margin-bottom: 5px; }
+        .master-spec { color: #6f42c1; font-weight: 600; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .master-exp { color: #888; font-size: 13px; margin-bottom: 15px; }
+
+        .reviews-container {
+            margin-top: 15px;
+            text-align: left;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .reviews-title {
+            font-size: 12px; font-weight: bold; color: #999; margin-bottom: 8px; text-transform: uppercase;
+        }
+        .review-item {
+            background-color: #f9f9f9;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .review-header {
+            display: flex; justify-content: space-between; margin-bottom: 4px;
+        }
+        .review-author { font-weight: bold; color: #333; }
+        .review-rating { color: gold; }
+        .review-text { color: #555; font-style: italic; }
+        .review-date { font-size: 10px; color: #aaa; display: block; text-align: right; margin-top: 4px; }
+
+        .rating-badge {
+            background-color: #fff3cd; color: #856404;
+            padding: 5px 10px; border-radius: 15px;
+            font-weight: bold; font-size: 14px;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+
+        .footer { background-color: #333; color: #bbb; text-align: center; padding: 40px 20px; margin-top: 60px; }
+        .footer p { margin: 0; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/" class="logo">Beauty Salon ✨</a>
+        <div class="nav-links">
+            <a href="#services">Послуги</a>
+            <a href="#masters">Майстри</a>
+            <a href="/auth/login" class="btn-login">Увійти</a>
+            <a href="/auth/register" class="btn-register">Зареєструватися</a>
+        </div>
+    </div>
+
+    <div class="hero">
+        <h1>Твоя краса — наш пріоритет</h1>
+        <p>Професійні майстри, найкращий сервіс та зручний онлайн-запис.</p>
+        <a href="/auth/register" class="hero-btn">Записатися зараз</a>
+    </div>
+
+    <div class="container" id="services">
+        <h2 class="section-title">Наші Послуги</h2>
+
+        <div th:if="${#lists.isEmpty(services)}">
+            <p style="text-align: center; color: #777;">Список послуг оновлюється.</p>
+        </div>
+        <div class="grid">
+            <div th:each="s : ${services}" class="service-card">
+                <div class="service-title" th:text="${s.name}">Назва</div>
+                <div class="service-desc" th:text="${s.description}">Опис...</div>
+
+                <div class="service-meta">
+                    <span class="price-tag" th:text="${s.price} + ' грн'">500 грн</span>
+                    <span class="duration">
+                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>
+                        <span th:text="${s.durationMinutes} + ' хв'">60 хв</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="masters" style="background-color: #fff; max-width: 100%;">
+        <div style="max-width: 1100px; margin: 0 auto;">
+            <h2 class="section-title">Наші Майстри</h2>
+
+            <div th:if="${#lists.isEmpty(masters)}">
+                <p style="text-align: center; color: #777;">Список майстрів формується.</p>
+            </div>
+            <div class="grid">
+                <div th:each="m : ${masters}" class="master-card">
+                    <div class="master-avatar" th:text="${#strings.substring(m.user.name, 0, 1)}">M</div>
+
+                    <div class="master-name" th:text="${m.user.name}">Ім'я Прізвище</div>
+                    <div class="master-spec" th:text="${m.specialization}">Спеціалізація</div>
+                    <div class="master-exp" th:text="'Досвід: ' + ${m.experience} + ' років'">Досвід</div>
+
+                    <div style="margin-top: 10px;">
+                        <span class="rating-badge">
+                            ⭐ <span th:text="${m.formattedRating}">-</span>
+                        </span>
+                    </div>
+
+                    <div th:if="${not #lists.isEmpty(m.masterReviews)}" class="reviews-container">
+                        <div class="reviews-title">Відгуки клієнтів:</div>
+
+                        <div th:each="review : ${m.masterReviews}" class="review-item">
+                            <div class="review-header">
+                                <span class="review-author" th:text="${review.booking.client.name}">Клієнт</span>
+                                <span class="review-rating">
+                                    <span th:each="i : ${#numbers.sequence(1, review.rating)}">★</span>
+                                </span>
+                            </div>
+                            <div class="review-text" th:text="'&quot;' + ${review.comment} + '&quot;'">Коментар</div>
+                            <span class="review-date" th:text="${#temporals.format(review.createdAt, 'dd.MM.yyyy')}">Дата</span>
+                        </div>
+                    </div>
+
+                    <div th:if="${#lists.isEmpty(m.masterReviews)}" style="margin-top: 15px; font-size: 12px; color: #bbb;">
+                        Відгуків поки немає
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2025 Beauty Salon Booking System. Всі права захищено.</p>
+    </div>
+</body>
+</html>

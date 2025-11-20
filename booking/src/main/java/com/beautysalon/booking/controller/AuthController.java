@@ -12,7 +12,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional; 
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -36,13 +36,11 @@ public class AuthController {
         this.bookingService = bookingService;
     }
 
-    // === Сторінка входу ===
     @GetMapping("/login")
     public String showLoginForm() {
         return "auth_login";
     }
 
-    // === Обробка логіну ===
     @PostMapping("/login")
     public String loginUser(
             @RequestParam("email") String email,
@@ -52,16 +50,16 @@ public class AuthController {
             HttpSession session) {
 
         User user = userService.login(email, password);
-        
+
         if (user != null) {
             session.setAttribute("loggedInUser", user);
-            
+
             if (user.getRole() == Role.ADMIN) {
                 return "redirect:/auth/admin/dashboard";
             } else if (user.getRole() == Role.MASTER) {
                 return "redirect:/auth/master/dashboard";
             } else {
-                return "redirect:/auth/home"; 
+                return "redirect:/auth/home";
             }
         } else {
             model.addAttribute("error", "Невірний email або пароль");
@@ -69,7 +67,6 @@ public class AuthController {
         }
     }
 
-    // === Сторінка реєстрації ===
     @GetMapping("/register")
     public String showRegisterForm(Model model) {
         if (!model.containsAttribute("user")) {
@@ -78,7 +75,6 @@ public class AuthController {
         return "register";
     }
 
-    // === Обробка реєстрації ===
     @PostMapping("/register")
     public String registerUser(
             @Valid @ModelAttribute("user") User user,
@@ -98,34 +94,28 @@ public class AuthController {
         }
 
         userService.save(user);
-
         redirectAttributes.addFlashAttribute("success", "Реєстрація успішна! Увійдіть.");
         return "redirect:/auth/login";
     }
 
-    // === ДАШБОРД КЛІЄНТА (ОНОВЛЕНО) ===
     @GetMapping("/home")
-    @Transactional // <-- ЦЯ АНОТАЦІЯ ВИПРАВЛЯЄ ПОМИЛКУ 500
+    @Transactional
     public String showHomePage(HttpSession session, Model model) {
         User loggedInUser = (User) session.getAttribute("loggedInUser");
-        
+
         if (loggedInUser != null) {
-            // Отримуємо свіжого користувача. 
-            // Завдяки @Transactional, всі його зв'язки (bookings, master, service) 
-            // будуть доступні для Thymeleaf.
             User freshUser = userService.findByEmail(loggedInUser.getEmail()).orElse(loggedInUser);
-            
             model.addAttribute("user", freshUser);
-            return "dashboard"; 
+            return "dashboard";
         } else {
             return "redirect:/auth/login";
         }
     }
 
-    // === ДАШБОРД АДМІНА ===
     @GetMapping("/admin/dashboard")
     public String showAdminDashboard(HttpSession session, Model model) {
         User loggedInUser = (User) session.getAttribute("loggedInUser");
+
         if (loggedInUser != null && loggedInUser.getRole() == Role.ADMIN) {
             model.addAttribute("admin", loggedInUser);
             return "admin_dashboard";
@@ -134,29 +124,33 @@ public class AuthController {
         }
     }
 
-    // === ДАШБОРД МАЙСТРА ===
     @GetMapping("/master/dashboard")
-    public String showMasterDashboard(HttpSession session, Model model) {
+    public String showMasterDashboard(
+            HttpSession session,
+            Model model,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month) {
+
         User loggedInUser = (User) session.getAttribute("loggedInUser");
-        
+
         if (loggedInUser != null && loggedInUser.getRole() == Role.MASTER) {
             try {
                 Master masterProfile = masterService.findMasterByUser(loggedInUser.getUserId());
                 UUID masterId = masterProfile.getMasterId();
-                
-                List<Booking> bookings = bookingService.getBookingsByMaster(masterId); 
-                
-                // 2. Календарна логіка (статична, поточний місяць)
-                YearMonth currentMonth = YearMonth.now();
+
+                List<Booking> bookings = bookingService.getBookingsByMaster(masterId);
+
+                YearMonth currentMonth = month == null ? YearMonth.now() : month;
                 List<ScheduleDayDto> monthlySchedule = masterService.getMonthlyScheduleView(masterId, currentMonth);
 
                 model.addAttribute("master", masterProfile);
                 model.addAttribute("bookings", bookings);
                 model.addAttribute("monthlySchedule", monthlySchedule);
                 model.addAttribute("currentMonth", currentMonth);
-                
-                return "master_dashboard"; 
-                
+                model.addAttribute("prevMonth", currentMonth.minusMonths(1));
+                model.addAttribute("nextMonth", currentMonth.plusMonths(1));
+
+                return "master_dashboard";
+
             } catch (RuntimeException e) {
                 model.addAttribute("error", "Помилка завантаження профілю: " + e.getMessage());
                 return "auth_login";
@@ -164,5 +158,11 @@ public class AuthController {
         } else {
             return "redirect:/auth/login";
         }
+    }
+
+    @GetMapping("/logout")
+    public String logout(HttpSession session) {
+        session.invalidate();
+        return "redirect:/";
     }
 }

@@ -1,14 +1,15 @@
 package com.beautysalon.booking.entity;
 
-import com.beautysalon.booking.state.*; // <-- Імпортуємо наші чисті стани
+import com.beautysalon.booking.state.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-// БІЛЬШЕ НЕМАЄ жодних імпортів Spring (ApplicationContext, @Autowired)
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "bookings")
@@ -37,51 +38,37 @@ public class Booking {
     private LocalDate bookingDate;
     private LocalTime bookingTime;
 
-    // === Зміни для State Pattern ===
-
-    @Enumerated(EnumType.STRING) // <-- Зберігаємо enum у БД як рядок
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private BookingStatus status;
 
-    @Transient // <-- НЕ зберігаємо в БД, це поле для логіки [cite: 137]
+    @Transient
     private BookingState state;
-
-    // === Кінець змін ===
 
     private double totalPrice;
 
     @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     private Payment payment;
 
-    /**
-     * Конструктор за замовчуванням.
-     * Встановлює початковий стан при створенні нового бронювання.
-     */
+    @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private Review review;
+
     public Booking() {
         this.status = BookingStatus.PENDING;
-        initState(); // Ініціалізуємо об'єкт стану
+        initState();
     }
 
-    /**
-     * Метод, що викликається JPA ПІСЛЯ завантаження сутності з БД.
-     * Використовується для ініціалізації поля 'state' на основі 'status'.
-     */
     @PostLoad
     private void onPostLoad() {
         initState();
     }
 
-    /**
-     * Ініціалізує поле 'state' на основі поточного 'status'.
-     * Це "ручна" реалізація, яка не використовує Spring.
-     * Викликає Singleton-екземпляри станів.
-     */
     private void initState() {
         if (status == null) {
             status = BookingStatus.PENDING;
         }
-        
-        // Використовуємо 'getInstance()' замість 'new ...' або 'context.getBean(...)'
+
         this.state = switch (status) {
             case PENDING   -> PendingState.getInstance();
             case CONFIRMED -> ConfirmedState.getInstance();
@@ -91,57 +78,108 @@ public class Booking {
         };
     }
 
-    // === Делегування дій поточному стану ===
-    // 'Booking' (Context) не знає логіки, він просто делегує[cite: 156].
-    
     public void confirm() {
         state.confirm(this);
     }
-    
+
     public void pay() {
         state.pay(this);
     }
-    
+
     public void cancel() {
         state.cancel(this);
     }
-    
+
     public void complete() {
         state.complete(this);
     }
 
-    // === Геттери та Сеттери ===
+    public UUID getBookingId() {
+        return bookingId;
+    }
 
-    public UUID getBookingId() { return bookingId; }
-    public void setBookingId(UUID bookingId) { this.bookingId = bookingId; }
-    public User getClient() { return client; }
-    public void setClient(User client) { this.client = client; }
-    public Master getMaster() { return master; }
-    public void setMaster(Master master) { this.master = master; }
-    public Service getService() { return service; }
-    public void setService(Service service) { this.service = service; }
-    public Schedule getSchedule() { return schedule; }
-    public void setSchedule(Schedule schedule) { this.schedule = schedule; }
-    public LocalDate getBookingDate() { return bookingDate; }
-    public void setBookingDate(LocalDate bookingDate) { this.bookingDate = bookingDate; }
-    public LocalTime getBookingTime() { return bookingTime; }
-    public void setBookingTime(LocalTime bookingTime) { this.bookingTime = bookingTime; }
-    
-    public BookingStatus getStatus() { return status; }
-    
-    /**
-     * Ключовий метод!
-     * Коли стан (State) змінює 'status' бронювання,
-     * цей сеттер автоматично викликає 'initState()' для
-     * оновлення об'єкта 'state'.
-     */
+    public void setBookingId(UUID bookingId) {
+        this.bookingId = bookingId;
+    }
+
+    public User getClient() {
+        return client;
+    }
+
+    public void setClient(User client) {
+        this.client = client;
+    }
+
+    public Master getMaster() {
+        return master;
+    }
+
+    public void setMaster(Master master) {
+        this.master = master;
+    }
+
+    public Service getService() {
+        return service;
+    }
+
+    public void setService(Service service) {
+        this.service = service;
+    }
+
+    public Schedule getSchedule() {
+        return schedule;
+    }
+
+    public void setSchedule(Schedule schedule) {
+        this.schedule = schedule;
+    }
+
+    public LocalDate getBookingDate() {
+        return bookingDate;
+    }
+
+    public void setBookingDate(LocalDate bookingDate) {
+        this.bookingDate = bookingDate;
+    }
+
+    public LocalTime getBookingTime() {
+        return bookingTime;
+    }
+
+    public void setBookingTime(LocalTime bookingTime) {
+        this.bookingTime = bookingTime;
+    }
+
+    public BookingStatus getStatus() {
+        return status;
+    }
+
     public void setStatus(BookingStatus status) {
         this.status = status;
-        initState(); // <-- Синхронізація об'єкта 'state' зі 'status'
+        initState();
     }
-    
-    public double getTotalPrice() { return totalPrice; }
-    public void setTotalPrice(double totalPrice) { this.totalPrice = totalPrice; }
-    public Payment getPayment() { return payment; }
-    public void setPayment(Payment payment) { this.payment = payment; }
+
+    public double getTotalPrice() {
+        return totalPrice;
+    }
+
+    public void setTotalPrice(double totalPrice) {
+        this.totalPrice = totalPrice;
+    }
+
+    public Payment getPayment() {
+        return payment;
+    }
+
+    public void setPayment(Payment payment) {
+        this.payment = payment;
+    }
+
+    public Review getReview() {
+        return review;
+    }
+
+    public void setReview(Review review) {
+        this.review = review;
+    }
 }

@@ -5,8 +5,8 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "masters")
@@ -35,7 +35,6 @@ public class Master {
     @OneToMany(mappedBy = "master", cascade = CascadeType.ALL)
     private List<Booking> bookings;
 
-    // Конструктори
     public Master() {}
 
     public Master(User user, String specialization, int experience) {
@@ -44,7 +43,6 @@ public class Master {
         this.experience = experience;
     }
 
-    // Геттери та Сеттери
     public UUID getMasterId() {
         return masterId;
     }
@@ -99,5 +97,29 @@ public class Master {
 
     public void setBookings(List<Booking> bookings) {
         this.bookings = bookings;
+    }
+
+    public List<Review> getMasterReviews() {
+        if (bookings == null) return new ArrayList<>();
+
+        return bookings.stream()
+                .map(Booking::getReview)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    public String getFormattedRating() {
+        List<Review> reviews = getMasterReviews();
+
+        if (reviews.isEmpty()) {
+            return "-";
+        }
+
+        double average = reviews.stream()
+                .mapToInt(Review::getRating)
+                .average()
+                .orElse(0.0);
+
+        return String.format("%.1f", average).replace(',', '.');
     }
 }
