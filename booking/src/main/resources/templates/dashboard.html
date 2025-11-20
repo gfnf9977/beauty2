@@ -5,19 +5,16 @@
     <title>Кабінет клієнта</title>
     <link rel="stylesheet" href="/css/beauty-salon.css">
     <style>
-        /* === СТИЛІ ТАБЛИЦІ === */
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
         th { background-color: #f4f4f4; }
-        
-        /* === СТИЛІ КНОПОК === */
+
         .btn-action { padding: 5px 10px; margin-right: 5px; cursor: pointer; border: none; color: white; border-radius: 4px; text-decoration: none; font-size: 13px;}
         .btn-confirm { background-color: #28a745; }
         .btn-pay { background-color: #007bff; }
         .btn-complete { background-color: #17a2b8; }
         .btn-cancel { background-color: #dc3545; }
 
-        /* === СТИЛІ МОДАЛЬНОГО ВІКНА === */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -27,22 +24,21 @@
             justify-content: center;
             align-items: center;
         }
-        
+
         .modal-content { position: relative; }
-        
+
         .close-btn {
             position: absolute;
             top: -40px; right: 0;
             color: white; font-size: 30px; cursor: pointer;
         }
 
-        /* === ВАШІ СТИЛІ КАРТКИ === */
         .card {
             background: linear-gradient(135deg, #007bff, #004080);
             border-radius: 15px;
             padding: 20px;
             width: 350px;
-            height: auto; /* Авто-висота після видалення імені */
+            height: auto;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
             color: white;
             display: flex;
@@ -60,14 +56,19 @@
         .card-form { display: flex; flex-direction: column; gap: 15px; }
         .input-group { display: flex; flex-direction: column; gap: 5px; }
         .input-group label { font-weight: bold; font-size: 12px; }
-        
-        .input-group input {
+
+        .input-group input, .input-group textarea {
             padding: 8px;
             border: none; border-radius: 5px; font-size: 14px;
             outline: none; background: rgba(255, 255, 255, 0.2); color: white;
         }
+
+        #reviewModal textarea {
+             background: white; color: black; border: 1px solid #ccc;
+        }
+
         .input-group input::placeholder { color: rgba(255, 255, 255, 0.7); }
-        
+
         .flex-row { display: flex; justify-content: space-between; gap: 10px; }
         .half { width: 48%; }
 
@@ -76,21 +77,75 @@
             border: none; border-radius: 5px; font-size: 16px;
             cursor: pointer; transition: background-color 0.3s ease; margin-top: 10px;
         }
+
         .btn-submit-pay:hover { background-color: #218838; }
-        
+
         .payment-amount { text-align: center; font-size: 1.2em; margin-bottom: 10px; font-weight: bold; }
+
+        .master-cell {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .review-tooltip {
+            visibility: hidden;
+            width: 120px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+
+        .master-cell.completed:hover .review-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .master-cell.completed {
+            color: #007bff;
+            text-decoration: underline;
+        }
+
+        .rating {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .rating input { display: none; }
+
+        .rating label {
+            font-size: 30px;
+            color: #ccc;
+            cursor: pointer;
+        }
+
+        .rating input:checked ~ label,
+        .rating label:hover,
+        .rating label:hover ~ label {
+            color: gold;
+        }
     </style>
 </head>
 <body>
     <div class="dashboard-card" style="width: 80%; max-width: 1000px;">
         <div class="content">
             <h1>Особистий кабінет</h1>
-            
-            <!-- БЛОК ПОВІДОМЛЕНЬ -->
-            <div th:if="${success}" class="alert alert-success" style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #c3e6cb;">
+
+            <div th:if="${success}" style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #c3e6cb;">
                 <span th:text="${success}"></span>
             </div>
-            <div th:if="${error}" class="alert alert-danger" style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #f5c6cb;">
+            <div th:if="${error}" style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #f5c6cb;">
                 <span th:text="${error}"></span>
             </div>
 
@@ -103,7 +158,7 @@
             </div>
 
             <h3>Мої бронювання:</h3>
-            
+
             <div th:if="${#lists.isEmpty(user.bookings)}">
                 <p>У вас поки немає активних бронювань.</p>
             </div>
@@ -122,41 +177,47 @@
                 <tbody>
                     <tr th:each="booking : ${user.bookings}">
                         <td th:text="${booking.service.name}"></td>
-                        <td th:text="${booking.master.user.name}"></td>
+
+                        <td class="master-cell"
+                            th:classappend="${booking.status.name() == 'COMPLETED'} ? 'completed' : ''"
+                            th:data-id="${booking.bookingId}"
+                            onclick="if(this.classList.contains('completed')) openReviewModal(this.getAttribute('data-id'))">
+
+                            <span th:text="${booking.master.user.name}"></span>
+
+                            <span th:if="${booking.status.name() == 'COMPLETED'}" class="review-tooltip">
+                                Залишити відгук
+                            </span>
+                        </td>
+
                         <td th:text="${booking.bookingDate} + ' ' + ${booking.bookingTime}"></td>
                         <td th:text="${booking.totalPrice} + ' грн'"></td>
-                        
+
                         <td th:text="${booking.status}" style="font-weight: bold;"></td>
-                        
+
                         <td>
                             <div style="display: flex; gap: 5px;">
-                                <!-- Підтвердити (тільки PENDING) -->
-                                <form th:if="${booking.status.name() == 'PENDING'}" 
+                                <form th:if="${booking.status.name() == 'PENDING'}"
                                       th:action="@{/web/bookings/{id}/confirm(id=${booking.bookingId})}" method="post">
                                     <button type="submit" class="btn-action btn-confirm">Підтвердити</button>
                                 </form>
 
-                                <!-- ОПЛАТИТИ (тільки CONFIRMED) -->
-                                <button th:if="${booking.status.name() == 'CONFIRMED'}" 
-                                        type="button" 
+                                <button th:if="${booking.status.name() == 'CONFIRMED'}"
+                                        type="button"
                                         class="btn-action btn-pay"
                                         th:onclick="openPaymentModal([[${booking.bookingId}]], [[${booking.totalPrice}]])">
                                     Оплатити
                                 </button>
 
-                                <!-- КНОПКА ЗАВЕРШИТИ ВИДАЛЕНА (Це робить майстер) -->
-
-                                <!-- Скасувати (Якщо не завершено і не скасовано) -->
-                                <form th:if="${booking.status.name() != 'CANCELLED' and booking.status.name() != 'COMPLETED'}" 
+                                <form th:if="${booking.status.name() != 'CANCELLED' and booking.status.name() != 'COMPLETED'}"
                                       th:action="@{/web/bookings/{id}/cancel(id=${booking.bookingId})}" method="post">
                                     <button type="submit" class="btn-action btn-cancel">Скасувати</button>
                                 </form>
 
-                                <!-- Кнопка Квитанції (Якщо є оплата) -->
-                                <a th:if="${booking.status.name() == 'PAID' or booking.status.name() == 'COMPLETED' or (booking.status.name() == 'CANCELLED' and booking.payment != null)}" 
-                                   th:href="@{/web/bookings/{id}/receipt(id=${booking.bookingId})}" 
-                                   target="_blank" 
-                                   class="btn-action" 
+                                <a th:if="${booking.status.name() == 'PAID' or booking.status.name() == 'COMPLETED' or (booking.status.name() == 'CANCELLED' and booking.payment != null)}"
+                                   th:href="@{/web/bookings/{id}/receipt(id=${booking.bookingId})}"
+                                   target="_blank"
+                                   class="btn-action"
                                    style="background-color: #6c757d; text-decoration: none; display: flex; align-items: center; justify-content: center;"
                                    title="Квитанція">
                                    📄
@@ -173,25 +234,18 @@
         </div>
     </div>
 
-    <!-- === МОДАЛЬНЕ ВІКНО ОПЛАТИ === -->
     <div id="paymentModal" class="modal-overlay">
         <div class="modal-content">
             <span class="close-btn" onclick="closePaymentModal()">&times;</span>
-            
             <div class="card">
                 <div class="payment-amount" id="modalAmountDisplay">До сплати: 0 грн</div>
                 <div class="card-chip"></div>
-                
                 <form id="cardForm" class="card-form" method="post">
                     <input type="hidden" name="paymentMethod" value="CARD">
-
                     <div class="input-group">
                         <label for="card-number">Номер картки</label>
                         <input type="text" id="card-number" name="cardNumber" placeholder="XXXX XXXX XXXX XXXX" required maxlength="19">
                     </div>
-                    
-                    <!-- Поле імені видалено -->
-
                     <div class="flex-row">
                         <div class="input-group half">
                             <label for="expiry-date">Термін дії</label>
@@ -205,6 +259,27 @@
                     <button type="submit" class="btn-submit-pay">Підтвердити оплату</button>
                 </form>
             </div>
+        </div>
+    </div>
+
+    <div id="reviewModal" class="modal-overlay">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 10px; width: 400px; text-align: center;">
+            <span class="close-btn" onclick="closeReviewModal()" style="color: #333; top: 10px; right: 15px;">&times;</span>
+            <h2 style="color: #333;">Залишити відгук</h2>
+            <p style="color: #666;">Оцініть роботу майстра</p>
+            <form id="reviewForm" method="post">
+                <div class="rating" style="margin: 20px 0;">
+                    <input type="radio" id="star5" name="rating" value="5" required /><label for="star5">★</label>
+                    <input type="radio" id="star4" name="rating" value="4" /><label for="star4">★</label>
+                    <input type="radio" id="star3" name="rating" value="3" /><label for="star3">★</label>
+                    <input type="radio" id="star2" name="rating" value="2" /><label for="star2">★</label>
+                    <input type="radio" id="star1" name="rating" value="1" /><label for="star1">★</label>
+                </div>
+                <div class="input-group">
+                    <textarea name="comment" placeholder="Ваш коментар (необов'язково)" rows="4" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; background: white; color: black;"></textarea>
+                </div>
+                <button type="submit" class="btn-submit-pay" style="margin-top: 20px; width: 100%;">Надіслати відгук</button>
+            </form>
         </div>
     </div>
 
@@ -223,12 +298,27 @@
             modal.style.display = 'none';
         }
 
+        const reviewModal = document.getElementById('reviewModal');
+        const reviewForm = document.getElementById('reviewForm');
+
+        function openReviewModal(bookingId) {
+            reviewForm.action = '/web/bookings/' + bookingId + '/review';
+            reviewModal.style.display = 'flex';
+        }
+
+        function closeReviewModal() {
+            reviewModal.style.display = 'none';
+        }
+
         window.onclick = function(event) {
             if (event.target == modal) {
                 closePaymentModal();
             }
+            if (event.target == reviewModal) {
+                closeReviewModal();
+            }
         }
-        
+
         document.getElementById('card-number').addEventListener('input', function (e) {
             e.target.value = e.target.value.replace(/[^\d]/g, '').replace(/(.{4})/g, '$1 ').trim();
         });

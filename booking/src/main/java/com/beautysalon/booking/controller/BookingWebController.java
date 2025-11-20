@@ -128,7 +128,6 @@ public class BookingWebController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Помилка скасування: " + e.getMessage());
         }
-
         String referer = request.getHeader("Referer");
         return "redirect:" + (referer != null ? referer : "/auth/home");
     }
@@ -145,6 +144,21 @@ public class BookingWebController {
         model.addAttribute("payment", booking.getPayment());
 
         return "receipt";
+    }
+
+    @PostMapping("/{id}/review")
+    public String addReview(
+            @PathVariable UUID id,
+            @RequestParam int rating,
+            @RequestParam(required = false) String comment,
+            RedirectAttributes redirectAttributes) {
+        try {
+            bookingService.addReview(id, rating, comment);
+            redirectAttributes.addFlashAttribute("success", "Дякуємо за ваш відгук!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Помилка: " + e.getMessage());
+        }
+        return "redirect:/auth/home";
     }
 
     @GetMapping("/masters/by-service/{serviceId}")

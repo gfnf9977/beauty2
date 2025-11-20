@@ -3,6 +3,7 @@ package com.beautysalon.booking.service;
 import com.beautysalon.booking.entity.*;
 import com.beautysalon.booking.repository.IBookingRepository;
 import com.beautysalon.booking.repository.IMasterRepository;
+import com.beautysalon.booking.repository.IReviewRepository;
 import com.beautysalon.booking.repository.IScheduleRepository;
 import com.beautysalon.booking.repository.IServiceRepository;
 import com.beautysalon.booking.repository.IUserRepository;
@@ -27,6 +28,7 @@ public class BookingService {
     private final PaymentFacade paymentFacade;
     private final IServiceRepository serviceRepository;
     private final IScheduleRepository scheduleRepository;
+    private final IReviewRepository reviewRepository;
 
     public BookingService(
             IBookingRepository bookingRepository,
@@ -34,11 +36,13 @@ public class BookingService {
             IServiceRepository serviceRepository,
             IMasterRepository masterRepository,
             IScheduleRepository scheduleRepository,
+            IReviewRepository reviewRepository,
             BookingEventPublisher eventPublisher,
             @Lazy PaymentFacade paymentFacade) {
         this.bookingRepository = bookingRepository;
         this.serviceRepository = serviceRepository;
         this.scheduleRepository = scheduleRepository;
+        this.reviewRepository = reviewRepository;
         this.eventPublisher = eventPublisher;
         this.paymentFacade = paymentFacade;
 
@@ -204,5 +208,15 @@ public class BookingService {
 
     public Optional<Booking> findBookingById(UUID id) {
         return bookingRepository.findById(id);
+    }
+
+    public void addReview(UUID bookingId, int rating, String comment) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Бронювання не знайдено"));
+        if (booking.getStatus() != BookingStatus.COMPLETED) {
+            throw new IllegalStateException("Відгук можна залишити лише для завершених послуг.");
+        }
+        Review review = new Review(rating, comment, booking);
+        reviewRepository.save(review);
     }
 }
