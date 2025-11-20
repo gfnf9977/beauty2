@@ -225,4 +225,27 @@ public class BookingWebController {
         List<LocalDate> workingDates = bookingService.getMasterWorkingDates(masterId);
         return new ResponseEntity<>(workingDates, HttpStatus.OK);
     }
+
+    @GetMapping("/masters/{masterId}/bookings")
+    @ResponseBody
+    public ResponseEntity<List<Map<String, Object>>> getMasterBookingsByDate(
+            @PathVariable UUID masterId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        List<Booking> bookings = bookingService.getBookingsByMasterAndDate(masterId, date);
+
+        List<Map<String, Object>> response = new ArrayList<>();
+
+        for (Booking b : bookings) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("bookingId", b.getBookingId());
+            map.put("time", b.getBookingTime().toString());
+            map.put("clientName", b.getClient().getName());
+            map.put("clientPhone", b.getClient().getPhone());
+            map.put("serviceName", b.getService().getName());
+            map.put("price", b.getTotalPrice());
+            map.put("status", b.getStatus().name());
+            response.add(map);
+        }
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }

@@ -186,6 +186,10 @@ public class BookingService {
         return bookingRepository.findAll(Sort.by(Sort.Direction.DESC, "bookingDate", "bookingTime"));
     }
 
+    public List<Booking> getBookingsByMasterAndDate(UUID masterId, LocalDate date) {
+        return bookingRepository.findByMasterMasterIdAndBookingDate(masterId, date);
+    }
+
     public com.beautysalon.booking.entity.Service addService(com.beautysalon.booking.entity.Service service) {
         return serviceRepository.save(service);
     }
