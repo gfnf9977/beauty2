@@ -13,7 +13,6 @@ public class PaidState implements BookingState {
 
     @Override
     public void confirm(Booking booking) {
-        // Вже підтверджено (і оплачено), нічого не робимо
     }
 
     @Override
@@ -23,9 +22,7 @@ public class PaidState implements BookingState {
 
     @Override
     public void cancel(Booking booking) {
-        // Дозволяємо скасування (з логікою повернення коштів, якої поки немає)
         booking.setStatus(BookingStatus.CANCELLED);
-        // TODO: Тут має бути логіка повернення коштів
     }
 
     @Override
