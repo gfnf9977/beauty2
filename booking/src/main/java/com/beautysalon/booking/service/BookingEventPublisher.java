@@ -15,35 +15,23 @@ import java.util.List;
 @Service
 public class BookingEventPublisher {
 
-    // "Ручний" список спостерігачів
     private final List<IBookingObserver> observers = new ArrayList<>();
 
-    /**
-     * Метод для додавання нового спостерігача.
-     */
     public void subscribe(IBookingObserver observer) {
         System.out.println("BookingEventPublisher: Новий підписник -> " + observer.getClass().getSimpleName());
         observers.add(observer);
     }
 
-    /**
-     * Метод для видалення спостерігача.
-     */
     public void unsubscribe(IBookingObserver observer) {
         observers.remove(observer);
     }
 
-    /**
-     * Головний метод. Повідомляє ВСІХ підписників про подію.
-     */
     public void notifyObservers(Booking booking) {
         System.out.println("BookingEventPublisher: Повідомляємо " + observers.size() + " спостерігачів про зміну статусу...");
         for (IBookingObserver observer : observers) {
             try {
                 observer.update(booking);
             } catch (Exception e) {
-                // Логуємо помилку, але не зупиняємо цикл,
-                // щоб інші спостерігачі отримали повідомлення
                 System.err.println("Помилка при повідомленні спостерігача " + 
                                    observer.getClass().getSimpleName() + ": " + e.getMessage());
             }
