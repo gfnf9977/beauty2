@@ -10,22 +10,27 @@
         th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
         th { background-color: #e9ecef; color: #495057; }
         h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; }
-        
-        /* Бейджі ролей */
         .role-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; color: white; font-weight: bold; }
         .badge-master { background-color: #6f42c1; }
         .badge-client { background-color: #28a745; }
-        .badge-banned { background-color: #dc3545; } /* Червоний для бану */
+        .badge-banned { background-color: #dc3545; }
         
         /* Кнопки дій */
         .btn-action { border: none; cursor: pointer; padding: 6px 12px; border-radius: 4px; color: white; font-size: 13px; text-decoration: none; display: inline-block;}
-        .btn-confirm { background-color: #28a745; } /* Зелена */
-        .btn-cancel { background-color: #ffc107; color: black; } /* Жовта */
+        .btn-confirm { background-color: #28a745; } 
+        .btn-cancel { background-color: #ffc107; color: black; } 
         .btn-ban { background-color: #dc3545; color: white; border: none; cursor: pointer; padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: bold;}
         .btn-unban { background-color: #17a2b8; color: white; border: none; cursor: pointer; padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: bold;}
         
         .btn-ban:hover { background-color: #c82333; }
         .btn-unban:hover { background-color: #138496; }
+        
+        /* Контейнер для кнопок в рядок */
+        .actions-container {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
@@ -59,17 +64,26 @@
                         <td th:text="${m.phone}"></td>
                         <td><span class="role-badge badge-master">MASTER</span></td>
                         <td>
-                            <div style="display: flex; gap: 5px;">
+                            <div class="actions-container">
+                                <!-- Редагувати Профіль -->
+                                <a th:href="@{/web/admin/masters/{id}/edit(id=${m.userId})}" class="btn-action" style="background-color: #6f42c1;">
+                                    ✎ Профіль
+                                </a>
+                                
+                                <!-- Розклад -->
+                                <a th:href="@{/web/admin/masters/{id}/schedule(id=${m.userId})}" class="btn-action btn-confirm" style="background-color: #007bff;">
+                                    📅 Розклад
+                                </a>
+
                                 <!-- Понизити -->
                                 <form th:action="@{/web/admin/users/{id}/change-role(id=${m.userId}, role='CLIENT')}" method="post" onsubmit="return confirm('Понизити до Клієнта?');">
                                     <button type="submit" class="btn-action btn-cancel">▼ Client</button>
                                 </form>
+                                
                                 <!-- БАН -->
                                 <form th:action="@{/web/admin/users/{id}/change-role(id=${m.userId}, role='BANNED')}" method="post" onsubmit="return confirm('ЗАБЛОКУВАТИ цього користувача?');">
                                     <button type="submit" class="btn-ban">⛔ BAN</button>
                                 </form>
-                                <!-- Розклад -->
-                                <a th:href="@{/web/admin/masters/{id}/schedule(id=${m.userId})}" class="btn-action btn-confirm" style="background-color: #007bff;">Розклад</a>
                             </div>
                         </td>
                     </tr>
@@ -96,7 +110,7 @@
                         <td th:text="${c.phone}"></td>
                         <td><span class="role-badge badge-client">CLIENT</span></td>
                         <td>
-                            <div style="display: flex; gap: 5px;">
+                            <div class="actions-container">
                                 <!-- Підвищити -->
                                 <form th:action="@{/web/admin/users/{id}/change-role(id=${c.userId}, role='MASTER')}" method="post" onsubmit="return confirm('Підвищити до Майстра?');">
                                     <button type="submit" class="btn-action btn-confirm">▲ Master</button>
@@ -111,7 +125,7 @@
                 </tbody>
             </table>
 
-            <!-- 3. ТАБЛИЦЯ ЗАБЛОКОВАНИХ (НОВЕ) -->
+            <!-- 3. ТАБЛИЦЯ ЗАБЛОКОВАНИХ -->
             <h2 style="color: #dc3545;">🚫 Заблоковані користувачі</h2>
             <div th:if="${#lists.isEmpty(banned)}"><p>Заблокованих користувачів немає.</p></div>
             <table th:if="${not #lists.isEmpty(banned)}" style="border: 2px solid #dc3545;">
@@ -129,7 +143,7 @@
                         <td th:text="${b.email}"></td>
                         <td><span class="role-badge badge-banned">BANNED</span></td>
                         <td>
-                            <!-- РОЗБАНИТИ (повертаємо до статусу CLIENT) -->
+                            <!-- РОЗБАНИТИ -->
                             <form th:action="@{/web/admin/users/{id}/change-role(id=${b.userId}, role='CLIENT')}" method="post" onsubmit="return confirm('Розблокувати користувача?');">
                                 <button type="submit" class="btn-unban">✅ Розбанити</button>
                             </form>
